@@ -78,3 +78,4 @@ def chapter_zero_report() -> str:
             lines.extend(("", "Status:", "NO_SUPPORTED_HYPOTHESIS"))
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+from engagement_dev.scenarios.chapter_twelve import analyze_chapter_twelve, chapter_twelve_report

@@ -36,6 +36,7 @@ engagement-dev chapter-8
 engagement-dev chapter-9
 engagement-dev chapter-10
 engagement-dev chapter-11
+engagement-dev chapter-12
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -67,7 +68,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 11 — Managing Follow-Up Without Chasing](chapters/chapter_11_managing_follow_up_without_chasing.md) implements **Prior Interaction + Legitimate Reason + Contextual Timing + Stopping Rule → Simulated Follow-Up or Respectful Stop**. It keeps no response neutral, respects requested timing and strict no-contact states, limits no-response sequences, and never changes qualification or creates an engagement candidate merely because follow-up occurred.
 
-Chapters 0–11 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven branches for silence, “not now,” requested follow-up, declines, and referrals without confusing activity with progress. Chapter 12 is not implemented.
+[Chapter 12 — Building and Managing the Engagement Pipeline](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md) implements **Existing Lifecycle Evidence → Derived Pipeline State → Next Justified Action → Capacity Allocation → New Evidence**. It preserves state history and regression, separates activity from progress, protects silent accounts, enforces simple WIP limits, and excludes fake revenue forecasts and close probabilities.
+
+Chapters 0–12 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven follow-up branches; Chapter 12 composes multiple accounts into an evidence-state portfolio without creating a parallel source of truth.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -75,6 +78,6 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md), and practice respectful continuation and stopping in [Chapter 11](chapters/chapter_11_managing_follow_up_without_chasing.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md), practice respectful continuation and stopping in [Chapter 11](chapters/chapter_11_managing_follow_up_without_chasing.md), and manage the evidence-state portfolio in [Chapter 12](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md).
 
-The recommended next chapter is **Chapter 12 — Building and Managing the Engagement Pipeline**: managing multiple accounts across evidence states, with evidence-based progress and capacity controls that prevent one silent account from consuming all available attention.
+The recommended next chapter is **Chapter 13 — Learning From Rejection, Closure, and Lost Opportunities**: learning from evidence-backed closure without inventing explanations for why an account did not become an engagement.
