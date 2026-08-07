@@ -11,6 +11,10 @@ class EvidenceCategory(StrEnum):
     OBSERVED_BEHAVIOR = "OBSERVED_BEHAVIOR"
     STAKEHOLDER_STATEMENT = "STAKEHOLDER_STATEMENT"
     INFERENCE = "INFERENCE"
+    PUBLIC_MARKET_DATA = "PUBLIC_MARKET_DATA"
+    INDUSTRY_PATTERN = "INDUSTRY_PATTERN"
+    OBSERVED_TECHNOLOGY_PATTERN = "OBSERVED_TECHNOLOGY_PATTERN"
+    PROVIDER_EXPERIENCE = "PROVIDER_EXPERIENCE"
 
 
 DIRECT_EVIDENCE_CATEGORIES = frozenset(
@@ -18,6 +22,10 @@ DIRECT_EVIDENCE_CATEGORIES = frozenset(
         EvidenceCategory.PUBLIC_FACT,
         EvidenceCategory.OBSERVED_BEHAVIOR,
         EvidenceCategory.STAKEHOLDER_STATEMENT,
+        EvidenceCategory.PUBLIC_MARKET_DATA,
+        EvidenceCategory.INDUSTRY_PATTERN,
+        EvidenceCategory.OBSERVED_TECHNOLOGY_PATTERN,
+        EvidenceCategory.PROVIDER_EXPERIENCE,
     }
 )
 
@@ -27,6 +35,46 @@ class Market:
     id: str
     name: str
     account_ids: tuple[str, ...]
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class MarketEvidence:
+    """A sourced market-level observation, not evidence about an account."""
+
+    id: str
+    market_id: str
+    description: str
+    category: EvidenceCategory
+    source: str
+
+    @property
+    def is_observed(self) -> bool:
+        return self.category in DIRECT_EVIDENCE_CATEGORIES
+
+
+@dataclass(frozen=True)
+class MarketCharacteristic:
+    """An observable market pattern that may make problem-class research relevant."""
+
+    id: str
+    market_id: str
+    description: str
+    relevant_problem_class_ids: tuple[str, ...]
+    evidence_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class MarketHypothesis:
+    """A cautious justification for research; it never establishes customer need."""
+
+    id: str
+    market_id: str
+    cautious_statement: str
+    relevant_problem_class_ids: tuple[str, ...]
+    evidence_ids: tuple[str, ...]
+    assumptions: tuple[str, ...]
+    reason_for_investigation: str
 
 
 @dataclass(frozen=True)

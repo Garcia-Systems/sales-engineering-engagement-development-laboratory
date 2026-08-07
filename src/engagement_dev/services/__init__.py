@@ -14,6 +14,10 @@ from engagement_dev.domain import (
     UnqualifiedEngagementError,
     UnsupportedHypothesisError,
     ServiceOffer,
+    Market,
+    MarketCharacteristic,
+    MarketEvidence,
+    MarketHypothesis,
 )
 
 
@@ -147,4 +151,111 @@ class OfferEvaluator:
             ),
             selected,
             proof_ids,
+        )
+
+
+class InvestigationPriority(StrEnum):
+    PRIORITIZE_FOR_RESEARCH = "PRIORITIZE_FOR_RESEARCH"
+    WORTH_INVESTIGATING = "WORTH_INVESTIGATING"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    OUTSIDE_SUPPORTED_OFFER = "OUTSIDE_SUPPORTED_OFFER"
+
+
+@dataclass(frozen=True)
+class MarketEvaluation:
+    market_id: str
+    priority: InvestigationPriority
+    relevant_problem_class_ids: tuple[str, ...]
+    supporting_evidence_ids: tuple[str, ...]
+    findings: tuple[str, ...]
+    hypothesis: MarketHypothesis | None
+
+
+@dataclass(frozen=True)
+class ResearchCycle:
+    capacity: int
+    selected_market_ids: tuple[str, ...]
+    deferred_market_ids: tuple[str, ...]
+    rejected_market_ids: tuple[str, ...]
+    insufficient_evidence_market_ids: tuple[str, ...]
+
+
+class MarketEvaluator:
+    """Explain whether market-level evidence merits scarce account-research attention."""
+
+    def evaluate(
+        self,
+        *,
+        supported_offer: ServiceOffer,
+        profile: CapabilityProfile,
+        market: Market,
+        characteristics: tuple[MarketCharacteristic, ...],
+        evidence: tuple[MarketEvidence, ...],
+        excluded_boundary_ids: tuple[str, ...] = (),
+    ) -> MarketEvaluation:
+        # This is intentionally a short rule sequence rather than a lead score.
+        if excluded_boundary_ids:
+            statements = {item.identifier: item.statement for item in profile.boundaries}
+            boundaries = tuple(statements[item] for item in excluded_boundary_ids if item in statements)
+            return MarketEvaluation(
+                market.id, InvestigationPriority.OUTSIDE_SUPPORTED_OFFER, (), (),
+                tuple(f"Provider boundary applies: {statement}" for statement in boundaries), None,
+            )
+
+        offer_problem_ids = {problem.identifier for problem in supported_offer.problem_classes}
+        market_characteristics = tuple(item for item in characteristics if item.market_id == market.id)
+        evidence_by_id = {item.id: item for item in evidence if item.market_id == market.id}
+        relevant = tuple(dict.fromkeys(
+            problem_id
+            for characteristic in market_characteristics
+            for problem_id in characteristic.relevant_problem_class_ids
+            if problem_id in offer_problem_ids
+        ))
+        supporting = tuple(dict.fromkeys(
+            evidence_id
+            for characteristic in market_characteristics
+            if set(characteristic.relevant_problem_class_ids).intersection(relevant)
+            for evidence_id in characteristic.evidence_ids
+            if evidence_id in evidence_by_id and evidence_by_id[evidence_id].is_observed
+        ))
+        if not relevant or not supporting:
+            return MarketEvaluation(
+                market.id, InvestigationPriority.INSUFFICIENT_EVIDENCE, relevant, supporting,
+                ("Observed evidence does not yet support account-level research for a supported problem class.",), None,
+            )
+
+        priority = (
+            InvestigationPriority.PRIORITIZE_FOR_RESEARCH
+            if len(relevant) >= 2 and len(supporting) >= 2
+            else InvestigationPriority.WORTH_INVESTIGATING
+        )
+        hypothesis = MarketHypothesis(
+            f"hypothesis-{market.id}", market.id,
+            f"{market.name} may be worth investigating for {', '.join(relevant).lower()} opportunities.",
+            relevant, supporting,
+            ("Market patterns may not apply to any individual organization.",),
+            "Observed characteristics overlap with problem classes in the supported offer.",
+        )
+        return MarketEvaluation(
+            market.id, priority, relevant, supporting,
+            (
+                "Market characteristics overlap with supported problem classes.",
+                "This research priority is not proof of account need or a sales forecast.",
+            ), hypothesis,
+        )
+
+    def allocate(self, evaluations: tuple[MarketEvaluation, ...], capacity: int) -> ResearchCycle:
+        if capacity < 0:
+            raise ValueError("Research capacity cannot be negative.")
+        eligible = tuple(item for item in evaluations if item.priority in (
+            InvestigationPriority.PRIORITIZE_FOR_RESEARCH,
+            InvestigationPriority.WORTH_INVESTIGATING,
+        ))
+        selected = eligible[:capacity]
+        return ResearchCycle(
+            capacity,
+            tuple(item.market_id for item in selected),
+            tuple(item.market_id for item in eligible[capacity:]),
+            tuple(item.market_id for item in evaluations if item.priority is InvestigationPriority.OUTSIDE_SUPPORTED_OFFER),
+            tuple(item.market_id for item in evaluations if item.priority is InvestigationPriority.INSUFFICIENT_EVIDENCE),
         )
