@@ -1233,3 +1233,198 @@ class ConversationEvaluator:
                 "A refutation is valid discovery; completion does not imply qualification.",
             ),
         )
+
+
+# Chapter 12 portfolio policies compose, rather than duplicate, the lifecycle above.
+from engagement_dev.domain import (
+    ActivityEvent, EngagementCandidate, FollowUpStatus, NextJustifiedAction,
+    PipelineCapacity, PipelineDisposition, PipelineItem, PipelineState,
+    PipelineStateEvent, PipelineWipLimits, StaleReviewOutcome,
+)
+
+
+PIPELINE_TRANSITIONS: dict[PipelineState, frozenset[PipelineState]] = {
+    PipelineState.RESEARCHING: frozenset({PipelineState.SIGNAL_FOUND, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
+    PipelineState.SIGNAL_FOUND: frozenset({PipelineState.HYPOTHESIS_SUPPORTED, PipelineState.RESEARCHING, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.HYPOTHESIS_SUPPORTED: frozenset({PipelineState.STAKEHOLDER_MAPPED, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.STAKEHOLDER_MAPPED: frozenset({PipelineState.OUTREACH_READY, PipelineState.HYPOTHESIS_SUPPORTED, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.OUTREACH_READY: frozenset({PipelineState.AWAITING_RESPONSE, PipelineState.HYPOTHESIS_SUPPORTED, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.AWAITING_RESPONSE: frozenset({PipelineState.CONVERSATION_ACTIVE, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.CONVERSATION_ACTIVE: frozenset({PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
+    PipelineState.MORE_DISCOVERY_NEEDED: frozenset({PipelineState.QUALIFIED_FOR_ENGAGEMENT, PipelineState.CONVERSATION_ACTIVE, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
+    PipelineState.QUALIFIED_FOR_ENGAGEMENT: frozenset({PipelineState.DEFERRED, PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
+    PipelineState.DEFERRED: frozenset({PipelineState.RESEARCHING, PipelineState.SIGNAL_FOUND, PipelineState.HYPOTHESIS_SUPPORTED, PipelineState.STAKEHOLDER_MAPPED, PipelineState.OUTREACH_READY, PipelineState.AWAITING_RESPONSE, PipelineState.CONVERSATION_ACTIVE, PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.QUALIFIED_FOR_ENGAGEMENT, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
+    PipelineState.CLOSED_NO_OPPORTUNITY: frozenset({PipelineState.RESEARCHING}),
+    PipelineState.OUT_OF_SCOPE: frozenset({PipelineState.RESEARCHING}),
+}
+
+
+def derive_pipeline_state(item: PipelineItem) -> PipelineState:
+    """Project the strongest current evidence state; this is the derivation breakpoint."""
+    if item.disposition is PipelineDisposition.OUT_OF_SCOPE:
+        return PipelineState.OUT_OF_SCOPE
+    if item.disposition is PipelineDisposition.CLOSED_NO_OPPORTUNITY:
+        return PipelineState.CLOSED_NO_OPPORTUNITY
+    if item.disposition is PipelineDisposition.DEFERRED:
+        return PipelineState.DEFERRED
+    if item.hypothesis and item.hypothesis.status in {HypothesisStatus.REFUTED, HypothesisStatus.CONTRADICTED}:
+        return PipelineState.CLOSED_NO_OPPORTUNITY
+    if (
+        item.qualification
+        and item.qualification.condition_met
+        and item.qualification.outcome is QualificationOutcome.QUALIFIED_FOR_ENGAGEMENT
+        and item.engagement_candidate
+        and item.engagement_candidate.qualification_id == item.qualification.id
+    ):
+        return PipelineState.QUALIFIED_FOR_ENGAGEMENT
+    if item.qualification:
+        if item.qualification.outcome is QualificationOutcome.NOT_A_FIT:
+            return PipelineState.OUT_OF_SCOPE
+        if item.qualification.outcome in {
+            QualificationOutcome.NO_CURRENT_OPPORTUNITY,
+            QualificationOutcome.NO_ACTIONABLE_IMPACT,
+            QualificationOutcome.EXTERNAL_HELP_NOT_ACCEPTED,
+        }:
+            return PipelineState.CLOSED_NO_OPPORTUNITY
+        if item.qualification.outcome is QualificationOutcome.TIMING_NOT_ACTIVE:
+            return PipelineState.DEFERRED
+        return PipelineState.MORE_DISCOVERY_NEEDED
+    if item.conversation and item.conversation.status in {ConversationStatus.SIMULATED, ConversationStatus.COMPLETED}:
+        if item.conversation.hypothesis_outcome in {HypothesisOutcome.HYPOTHESIS_REFUTED, HypothesisOutcome.NO_CURRENT_OPPORTUNITY}:
+            return PipelineState.CLOSED_NO_OPPORTUNITY
+        return PipelineState.MORE_DISCOVERY_NEEDED
+    if item.conversation:
+        return PipelineState.CONVERSATION_ACTIVE
+    if item.outreach and item.outreach.status in {OutreachStatus.SENT_SIMULATED, OutreachStatus.NO_RESPONSE}:
+        return PipelineState.AWAITING_RESPONSE
+    if item.outreach and item.outreach.status is OutreachStatus.REPLIED:
+        return PipelineState.CONVERSATION_ACTIVE
+    if item.outreach and item.outreach.status is OutreachStatus.READY:
+        return PipelineState.OUTREACH_READY
+    if item.stakeholder_map and item.stakeholder_map.stakeholders:
+        return PipelineState.STAKEHOLDER_MAPPED
+    if item.hypothesis and item.hypothesis.status in {HypothesisStatus.SUPPORTED_FOR_VALIDATION, HypothesisStatus.VALIDATED}:
+        return PipelineState.HYPOTHESIS_SUPPORTED
+    if any(signal.is_direct_evidence for signal in item.signals):
+        return PipelineState.SIGNAL_FOUND
+    return PipelineState.RESEARCHING
+
+
+def next_justified_action(item: PipelineItem) -> NextJustifiedAction:
+    state = derive_pipeline_state(item)
+    actions = {
+        PipelineState.RESEARCHING: ("Complete account research", "DEEP_RESEARCH", "Research evidence is incomplete."),
+        PipelineState.SIGNAL_FOUND: ("Form and test a cautious hypothesis", "DEEP_RESEARCH", "Supported signals require interpretation."),
+        PipelineState.HYPOTHESIS_SUPPORTED: ("Map stakeholders", "OUTREACH_PREPARATION", "Identify evidence sources before outreach."),
+        PipelineState.STAKEHOLDER_MAPPED: ("Prepare evidence-based outreach", "OUTREACH_PREPARATION", "A relevant stakeholder is mapped."),
+        PipelineState.OUTREACH_READY: ("Simulate initial outreach", "OUTREACH_PREPARATION", "The reviewed outreach is ready but unsent."),
+        PipelineState.AWAITING_RESPONSE: ("Wait until follow-up policy permits action", None, "Silence supplies no evidence and does not justify another touch."),
+        PipelineState.CONVERSATION_ACTIVE: ("Complete the evidence-oriented conversation", "DISCOVERY_CONVERSATION", "The conversation is underway."),
+        PipelineState.MORE_DISCOVERY_NEEDED: ("Resolve a specific qualification gap", "DISCOVERY_CONVERSATION", "Qualification evidence remains incomplete."),
+        PipelineState.DEFERRED: ("No action until the documented trigger", None, "Deferred timing controls attention."),
+        PipelineState.QUALIFIED_FOR_ENGAGEMENT: ("Create evidence-backed handoff", "FORMAL_HANDOFF", "The Chapter 10 threshold passed."),
+        PipelineState.CLOSED_NO_OPPORTUNITY: ("None", None, "The current investigation is closed."),
+        PipelineState.OUT_OF_SCOPE: ("None", None, "The work is outside the supported offer."),
+    }
+    description, kind, reason = actions[state]
+    return NextJustifiedAction(description, kind, reason)
+
+
+class PipelineProjector:
+    def create(self, item: PipelineItem, *, occurred_on: date, evidence_event: str) -> PipelineItem:
+        if item.state_history:
+            raise ValueError("A new pipeline projection cannot overwrite history.")
+        state = derive_pipeline_state(item)
+        return replace(item, state_history=(PipelineStateEvent(occurred_on, state, evidence_event),))
+
+    def refresh(self, item: PipelineItem, *, occurred_on: date, evidence_event: str) -> PipelineItem:
+        if not item.state_history:
+            return self.create(item, occurred_on=occurred_on, evidence_event=evidence_event)
+        prior, current = item.state_history[-1].state, derive_pipeline_state(item)
+        if current is prior:
+            return item
+        if current not in PIPELINE_TRANSITIONS[prior]:
+            raise ValueError(f"Unsupported evidence-state transition: {prior.value} -> {current.value}")
+        return replace(item, state_history=item.state_history + (PipelineStateEvent(occurred_on, current, evidence_event),))
+
+
+@dataclass(frozen=True)
+class CapacityAllocation:
+    selected: tuple[tuple[str, NextJustifiedAction], ...]
+    waiting: tuple[tuple[str, str], ...]
+    wip_violations: tuple[str, ...]
+
+
+class PipelineCapacityPlanner:
+    """Stable account-order allocation over justified actions, with no monetary score."""
+
+    def allocate(self, items: tuple[PipelineItem, ...], capacity: PipelineCapacity, limits: PipelineWipLimits = PipelineWipLimits()) -> CapacityAllocation:
+        counts = {
+            "DEEP_RESEARCH": sum(derive_pipeline_state(i) in {PipelineState.RESEARCHING, PipelineState.SIGNAL_FOUND} for i in items),
+            "UNRESOLVED_OUTREACH": sum(derive_pipeline_state(i) is PipelineState.AWAITING_RESPONSE for i in items),
+            "FORMAL_HANDOFF": sum(derive_pipeline_state(i) is PipelineState.QUALIFIED_FOR_ENGAGEMENT for i in items),
+        }
+        violations = tuple(
+            label for label, count, maximum in (
+                ("EXCESS_DEEP_RESEARCH_WIP", counts["DEEP_RESEARCH"], limits.deep_research),
+                ("EXCESS_UNRESOLVED_OUTREACH_WIP", counts["UNRESOLVED_OUTREACH"], limits.unresolved_outreach),
+                ("EXCESS_FORMAL_HANDOFF_WIP", counts["FORMAL_HANDOFF"], limits.formal_handoffs),
+            ) if count > maximum
+        )
+        remaining = {
+            "DEEP_RESEARCH": capacity.deep_research_slots,
+            "OUTREACH_PREPARATION": capacity.outreach_preparation_slots,
+            "DISCOVERY_CONVERSATION": capacity.discovery_conversation_slots,
+            "FORMAL_HANDOFF": capacity.formal_handoff_slots,
+        }
+        selected, waiting = [], []
+        for item in items:
+            action = next_justified_action(item)
+            if action.capacity_kind is None:
+                if derive_pipeline_state(item) is PipelineState.AWAITING_RESPONSE:
+                    waiting.append((item.account.name, action.reason))
+                continue
+            if remaining[action.capacity_kind] > 0:
+                selected.append((item.account.name, action))
+                remaining[action.capacity_kind] -= 1
+            else:
+                waiting.append((item.account.name, f"No {action.capacity_kind.lower().replace('_', ' ')} capacity remains."))
+        return CapacityAllocation(tuple(selected), tuple(waiting), violations)
+
+
+class PipelineHealthFinding(StrEnum):
+    TOO_MANY_RESEARCHING = "TOO_MANY_RESEARCHING"
+    TOO_MANY_AWAITING_RESPONSE = "TOO_MANY_AWAITING_RESPONSE"
+    NO_QUALIFIED_ENGAGEMENTS = "NO_QUALIFIED_ENGAGEMENTS"
+    NO_NEW_RESEARCH = "NO_NEW_RESEARCH"
+    FOLLOW_UP_CAPACITY_BLOCKED = "FOLLOW_UP_CAPACITY_BLOCKED"
+    BALANCED_PIPELINE = "BALANCED_PIPELINE"
+    EXCESS_WIP = "EXCESS_WIP"
+    STALE_ITEMS_PRESENT = "STALE_ITEMS_PRESENT"
+
+
+@dataclass(frozen=True)
+class ExplainedHealthFinding:
+    finding: PipelineHealthFinding
+    explanation: str
+
+
+def stale_items(items: tuple[PipelineItem, ...], *, today: date, threshold_days: int = 21) -> tuple[PipelineItem, ...]:
+    terminal = {PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}
+    return tuple(item for item in items if derive_pipeline_state(item) not in terminal and item.last_meaningful_evidence_on is not None and today - item.last_meaningful_evidence_on > timedelta(days=threshold_days))
+
+
+def pipeline_health(items: tuple[PipelineItem, ...], *, today: date, limits: PipelineWipLimits = PipelineWipLimits()) -> tuple[ExplainedHealthFinding, ...]:
+    states = tuple(derive_pipeline_state(item) for item in items)
+    findings: list[ExplainedHealthFinding] = []
+    if states.count(PipelineState.RESEARCHING) > limits.deep_research:
+        findings.append(ExplainedHealthFinding(PipelineHealthFinding.TOO_MANY_RESEARCHING, "Researching items exceed the explicit deep-research WIP limit."))
+    if states.count(PipelineState.AWAITING_RESPONSE) > limits.unresolved_outreach:
+        findings.append(ExplainedHealthFinding(PipelineHealthFinding.TOO_MANY_AWAITING_RESPONSE, "Unresolved outreach exceeds its WIP limit; silence must not consume unlimited attention."))
+    if PipelineState.QUALIFIED_FOR_ENGAGEMENT not in states:
+        findings.append(ExplainedHealthFinding(PipelineHealthFinding.NO_QUALIFIED_ENGAGEMENTS, "No item currently meets the evidence-backed engagement threshold."))
+    if stale_items(items, today=today):
+        findings.append(ExplainedHealthFinding(PipelineHealthFinding.STALE_ITEMS_PRESENT, "At least one item needs CONTINUE, DEFER, CLOSE, or REFRESH_RESEARCH review; staleness is not rejection."))
+    if not any(f.finding in {PipelineHealthFinding.TOO_MANY_RESEARCHING, PipelineHealthFinding.TOO_MANY_AWAITING_RESPONSE, PipelineHealthFinding.NO_QUALIFIED_ENGAGEMENTS} for f in findings):
+        findings.insert(0, ExplainedHealthFinding(PipelineHealthFinding.BALANCED_PIPELINE, "The portfolio contains current research, supported downstream evidence, and a qualified handoff within WIP limits."))
+    return tuple(findings)

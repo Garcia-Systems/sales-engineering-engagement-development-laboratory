@@ -1020,3 +1020,115 @@ class StakeholderReferral:
             raise ValueError("A referred contact must belong to an account.")
         if self.interest_confirmed:
             raise ValueError("A referral cannot establish the referred contact's interest.")
+
+
+# Chapter 12 composes the existing lifecycle records; it does not replace them.
+class PipelineState(StrEnum):
+    RESEARCHING = "RESEARCHING"
+    SIGNAL_FOUND = "SIGNAL_FOUND"
+    HYPOTHESIS_SUPPORTED = "HYPOTHESIS_SUPPORTED"
+    STAKEHOLDER_MAPPED = "STAKEHOLDER_MAPPED"
+    OUTREACH_READY = "OUTREACH_READY"
+    AWAITING_RESPONSE = "AWAITING_RESPONSE"
+    CONVERSATION_ACTIVE = "CONVERSATION_ACTIVE"
+    MORE_DISCOVERY_NEEDED = "MORE_DISCOVERY_NEEDED"
+    DEFERRED = "DEFERRED"
+    QUALIFIED_FOR_ENGAGEMENT = "QUALIFIED_FOR_ENGAGEMENT"
+    CLOSED_NO_OPPORTUNITY = "CLOSED_NO_OPPORTUNITY"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
+
+
+class PipelineDisposition(StrEnum):
+    ACTIVE = "ACTIVE"
+    DEFERRED = "DEFERRED"
+    CLOSED_NO_OPPORTUNITY = "CLOSED_NO_OPPORTUNITY"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
+
+
+class ActivityType(StrEnum):
+    RESEARCH_SESSION = "RESEARCH_SESSION"
+    EVIDENCE_REVIEWED = "EVIDENCE_REVIEWED"
+    ACCOUNT_ADDED = "ACCOUNT_ADDED"
+    OUTREACH_DRAFTED = "OUTREACH_DRAFTED"
+    OUTREACH_SENT_SIMULATED = "OUTREACH_SENT_SIMULATED"
+    FOLLOW_UP_ATTEMPTED = "FOLLOW_UP_ATTEMPTED"
+    CONVERSATION_HELD = "CONVERSATION_HELD"
+    NOTE_ADDED = "NOTE_ADDED"
+
+
+class StaleReviewOutcome(StrEnum):
+    CONTINUE = "CONTINUE"
+    DEFER = "DEFER"
+    CLOSE = "CLOSE"
+    REFRESH_RESEARCH = "REFRESH_RESEARCH"
+
+
+@dataclass(frozen=True)
+class PipelineStateEvent:
+    occurred_on: date
+    state: PipelineState
+    evidence_event: str
+
+
+@dataclass(frozen=True)
+class ActivityEvent:
+    occurred_on: date
+    activity_type: ActivityType
+    description: str
+
+
+@dataclass(frozen=True)
+class NextJustifiedAction:
+    description: str
+    capacity_kind: str | None
+    reason: str
+
+
+@dataclass(frozen=True)
+class PipelineItem:
+    """A portfolio projection over existing evidence, never a mutable CRM stage."""
+
+    account: Account
+    research_brief: AccountResearchBrief | None = None
+    signals: tuple[ObservedSignal, ...] = ()
+    hypothesis: OpportunityHypothesis | None = None
+    stakeholder_map: StakeholderMap | None = None
+    outreach: OutreachAttempt | None = None
+    conversation: Conversation | None = None
+    qualification: QualificationAssessment | None = None
+    engagement_candidate: EngagementCandidate | None = None
+    follow_up: FollowUpAction | None = None
+    disposition: PipelineDisposition = PipelineDisposition.ACTIVE
+    disposition_evidence: str = ""
+    last_meaningful_evidence_on: date | None = None
+    last_meaningful_evidence_event: str = ""
+    blockers: tuple[str, ...] = ()
+    unresolved_questions: tuple[str, ...] = ()
+    state_history: tuple[PipelineStateEvent, ...] = ()
+    activities: tuple[ActivityEvent, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.disposition is not PipelineDisposition.ACTIVE and not self.disposition_evidence:
+            raise ValueError("A non-active disposition requires supporting evidence.")
+        related = (
+            *(signal.account_id for signal in self.signals),
+            *((self.hypothesis.account_id,) if self.hypothesis else ()),
+            *((self.stakeholder_map.account_id,) if self.stakeholder_map else ()),
+        )
+        if any(account_id != self.account.id for account_id in related):
+            raise ValueError("Pipeline evidence must belong to the pipeline account.")
+
+
+@dataclass(frozen=True)
+class PipelineCapacity:
+    deep_research_slots: int = 2
+    outreach_preparation_slots: int = 2
+    discovery_conversation_slots: int = 2
+    formal_handoff_slots: int = 1
+
+
+@dataclass(frozen=True)
+class PipelineWipLimits:
+    deep_research: int = 3
+    unresolved_outreach: int = 4
+    formal_handoffs: int = 1

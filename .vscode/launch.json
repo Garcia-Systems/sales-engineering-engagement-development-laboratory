@@ -123,6 +123,16 @@
         "PYTHONPATH": "${workspaceFolder}/src"
       },
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 12 Pipeline State",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_pipeline_state.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
     }
   ]
 }
