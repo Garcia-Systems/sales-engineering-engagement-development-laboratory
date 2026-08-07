@@ -524,11 +524,128 @@ class StakeholderMap:
     question_mappings: tuple[ValidationQuestionMapping, ...]
 
 
+class ConversationStatus(StrEnum):
+    PLANNED = "PLANNED"
+    SIMULATED = "SIMULATED"
+    COMPLETED = "COMPLETED"
+
+
+class ConversationObjective(StrEnum):
+    VALIDATE_OPPORTUNITY_HYPOTHESIS = "VALIDATE_OPPORTUNITY_HYPOTHESIS"
+
+
+class ConversationStage(StrEnum):
+    OPEN = "OPEN"
+    CONTEXT = "CONTEXT"
+    EXPLORE = "EXPLORE"
+    CLARIFY = "CLARIFY"
+    SUMMARIZE = "SUMMARIZE"
+    NEXT_STEP = "NEXT_STEP"
+
+
+class QuestionType(StrEnum):
+    CURRENT_STATE = "CURRENT_STATE"
+    CHANGE = "CHANGE"
+    WORKFLOW = "WORKFLOW"
+    IMPACT = "IMPACT"
+    TECHNOLOGY = "TECHNOLOGY"
+    STAKEHOLDER = "STAKEHOLDER"
+    PRIORITY = "PRIORITY"
+    HISTORY = "HISTORY"
+    CONSTRAINT = "CONSTRAINT"
+    NEXT_STEP = "NEXT_STEP"
+
+
+class StatementRelationship(StrEnum):
+    SUPPORTS = "SUPPORTS"
+    REFINES = "REFINES"
+    CONTRADICTS = "CONTRADICTS"
+    NEUTRAL = "NEUTRAL"
+    INTRODUCES_NEW_INFORMATION = "INTRODUCES_NEW_INFORMATION"
+
+
+class HypothesisOutcome(StrEnum):
+    HYPOTHESIS_STRENGTHENED = "HYPOTHESIS_STRENGTHENED"
+    HYPOTHESIS_REFINED = "HYPOTHESIS_REFINED"
+    HYPOTHESIS_REFUTED = "HYPOTHESIS_REFUTED"
+    MORE_EVIDENCE_NEEDED = "MORE_EVIDENCE_NEEDED"
+    NO_CURRENT_OPPORTUNITY = "NO_CURRENT_OPPORTUNITY"
+
+
+@dataclass(frozen=True)
+class ConversationQuestion:
+    text: str
+    question_type: QuestionType
+    stage: ConversationStage
+
+
+@dataclass(frozen=True)
+class StakeholderStatement:
+    """What a stakeholder said, not an automatically objective operational fact."""
+
+    stakeholder_id: str
+    statement: str
+    topic: str
+    evidence_category: EvidenceCategory
+    relationship: StatementRelationship
+    source_conversation_id: str
+
+    def __post_init__(self) -> None:
+        if self.evidence_category is not EvidenceCategory.STAKEHOLDER_STATEMENT:
+            raise ValueError("A stakeholder statement requires STAKEHOLDER_STATEMENT evidence.")
+        if not self.statement.strip() or not self.source_conversation_id:
+            raise ValueError("A stakeholder statement requires content and conversation provenance.")
+
+
+@dataclass(frozen=True)
+class ConversationEvidence:
+    """Separates a direct statement from its cautious analyst interpretation."""
+
+    statement: StakeholderStatement
+    interpretation: str
+
+
+@dataclass(frozen=True)
+class HypothesisRevision:
+    original: OpportunityHypothesis
+    refined: OpportunityHypothesis | None
+    stakeholder_evidence: tuple[StakeholderStatement, ...]
+    outcome: HypothesisOutcome
+
+
+@dataclass(frozen=True)
+class ConversationEvidenceLedger:
+    known_before: tuple[str, ...]
+    hypothesized_before: tuple[str, ...]
+    unknown_before: tuple[str, ...]
+    known_from_stakeholder: tuple[str, ...]
+    still_unknown: tuple[str, ...]
+
+
 @dataclass(frozen=True)
 class Conversation:
     id: str
     contact_id: str
-    statement_signal_ids: tuple[str, ...]
+    statement_signal_ids: tuple[str, ...] = ()
+    account_id: str = ""
+    stakeholder_id: str = ""
+    outreach_attempt_id: str = ""
+    opportunity_hypothesis_id: str = ""
+    objective: ConversationObjective = ConversationObjective.VALIDATE_OPPORTUNITY_HYPOTHESIS
+    questions: tuple[ConversationQuestion, ...] = ()
+    stakeholder_statements: tuple[StakeholderStatement, ...] = ()
+    evidence_captured: tuple[ConversationEvidence, ...] = ()
+    hypothesis_outcome: HypothesisOutcome = HypothesisOutcome.MORE_EVIDENCE_NEEDED
+    unresolved_questions: tuple[str, ...] = ()
+    next_step: str = ""
+    status: ConversationStatus = ConversationStatus.PLANNED
+    qualified_opportunity_created: bool = False
+
+    def __post_init__(self) -> None:
+        if self.qualified_opportunity_created:
+            raise ValueError("Conversation completion cannot automatically create qualification.")
+        if any(item.source_conversation_id != self.id for item in self.stakeholder_statements):
+            raise ValueError("Stakeholder statements must retain this conversation as their source.")
 
 
 @dataclass(frozen=True)
