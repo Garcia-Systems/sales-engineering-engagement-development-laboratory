@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chapter 0",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "engagement_dev.cli",
+      "args": ["chapter-0"],
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
+    }
+  ]
+}
