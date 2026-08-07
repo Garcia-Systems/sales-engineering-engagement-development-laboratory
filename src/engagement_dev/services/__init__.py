@@ -18,6 +18,9 @@ from engagement_dev.domain import (
     MarketCharacteristic,
     MarketEvidence,
     MarketHypothesis,
+    AccountEvidence,
+    AccountInterpretation,
+    AccountCandidate,
 )
 
 
@@ -259,3 +262,135 @@ class MarketEvaluator:
             tuple(item.market_id for item in evaluations if item.priority is InvestigationPriority.OUTSIDE_SUPPORTED_OFFER),
             tuple(item.market_id for item in evaluations if item.priority is InvestigationPriority.INSUFFICIENT_EVIDENCE),
         )
+
+
+class AccountSelectionStatus(StrEnum):
+    SELECTED_FOR_RESEARCH = "SELECTED_FOR_RESEARCH"
+    DEFERRED = "DEFERRED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    OUTSIDE_SELECTED_MARKET = "OUTSIDE_SELECTED_MARKET"
+    OUTSIDE_SUPPORTED_OFFER = "OUTSIDE_SUPPORTED_OFFER"
+
+
+class AccountPriority(StrEnum):
+    RECENT_CHANGE_AND_COMPLEXITY = "RECENT_CHANGE_AND_COMPLEXITY"
+    MULTIPLE_RELEVANT_CHARACTERISTICS = "MULTIPLE_RELEVANT_CHARACTERISTICS"
+    SUFFICIENT_PUBLIC_INFORMATION = "SUFFICIENT_PUBLIC_INFORMATION"
+
+
+@dataclass(frozen=True)
+class AccountEvaluation:
+    account_id: str
+    status: AccountSelectionStatus
+    reason: str
+    candidate: AccountCandidate | None
+    interpretations: tuple[AccountInterpretation, ...]
+    priority: AccountPriority | None
+    has_negative_evidence: bool
+
+
+@dataclass(frozen=True)
+class AccountResearchQueue:
+    capacity: int
+    evaluations: tuple[AccountEvaluation, ...]
+
+    @property
+    def selected(self) -> tuple[AccountEvaluation, ...]:
+        return tuple(item for item in self.evaluations if item.status is AccountSelectionStatus.SELECTED_FOR_RESEARCH)
+
+
+class AccountListBuilder:
+    """Build an explainable research queue using ordered rules, never a lead score."""
+
+    def build(
+        self, *, selected_market: Market, supported_offer: ServiceOffer,
+        market_characteristics: tuple[MarketCharacteristic, ...], accounts: tuple[Account, ...],
+        evidence: tuple[AccountEvidence, ...], interpretations: tuple[AccountInterpretation, ...],
+        research_capacity: int,
+    ) -> AccountResearchQueue:
+        if research_capacity < 0:
+            raise ValueError("Research capacity cannot be negative.")
+        offer_problems = {item.identifier for item in supported_offer.problem_classes}
+        characteristics = tuple(item for item in market_characteristics if item.market_id == selected_market.id)
+        provisional: list[AccountEvaluation] = []
+        eligible: list[tuple[int, str, AccountEvaluation]] = []
+        priority_order = {
+            AccountPriority.RECENT_CHANGE_AND_COMPLEXITY: 0,
+            AccountPriority.MULTIPLE_RELEVANT_CHARACTERISTICS: 1,
+            AccountPriority.SUFFICIENT_PUBLIC_INFORMATION: 2,
+        }
+        for account in accounts:
+            account_evidence = tuple(item for item in evidence if item.account_id == account.id and item.is_observed)
+            account_interpretations = tuple(item for item in interpretations if item.account_id == account.id)
+            if account.market_id != selected_market.id:
+                provisional.append(AccountEvaluation(
+                    account.id, AccountSelectionStatus.OUTSIDE_SELECTED_MARKET,
+                    "The organization is outside the selected market.", None, account_interpretations, None, False,
+                ))
+                continue
+            relevant = tuple(dict.fromkeys(
+                problem for item in account_evidence for problem in item.relevant_problem_class_ids
+                if problem in offer_problems
+            ))
+            described_problems = tuple(dict.fromkeys(
+                problem for item in account_evidence for problem in item.relevant_problem_class_ids
+            ))
+            negative = any(item.is_negative for item in account_evidence)
+            supporting = tuple(item for item in account_evidence if set(item.relevant_problem_class_ids).intersection(relevant))
+            if negative:
+                provisional.append(AccountEvaluation(
+                    account.id, AccountSelectionStatus.DEFERRED,
+                    "Negative evidence suggests the current investigation is not appropriate; revisit only if circumstances change.",
+                    None, account_interpretations, None, True,
+                ))
+                continue
+            if described_problems and not relevant:
+                provisional.append(AccountEvaluation(
+                    account.id, AccountSelectionStatus.OUTSIDE_SUPPORTED_OFFER,
+                    "Observed characteristics relate only to problem classes outside the supported offer.",
+                    None, account_interpretations, None, False,
+                ))
+                continue
+            if len(supporting) < 2 or not relevant:
+                provisional.append(AccountEvaluation(
+                    account.id, AccountSelectionStatus.INSUFFICIENT_EVIDENCE,
+                    "Market membership alone does not justify deeper account research.", None,
+                    account_interpretations, None, False,
+                ))
+                continue
+            candidate = AccountCandidate(
+                account, selected_market, supporting, characteristics, relevant,
+                "Observable operational characteristics overlap with supported problem classes and justify more research; no customer problem is established.",
+            )
+            recent = any("recent" in item.description.casefold() or "expansion" in item.description.casefold() for item in supporting)
+            if recent and len(supporting) >= 3:
+                priority = AccountPriority.RECENT_CHANGE_AND_COMPLEXITY
+            elif len(supporting) >= 3 or len(relevant) >= 2:
+                priority = AccountPriority.MULTIPLE_RELEVANT_CHARACTERISTICS
+            else:
+                priority = AccountPriority.SUFFICIENT_PUBLIC_INFORMATION
+            evaluation = AccountEvaluation(
+                account.id, AccountSelectionStatus.DEFERRED,
+                "Relevant evidence supports research, subject to limited research capacity.",
+                candidate, account_interpretations, priority, False,
+            )
+            provisional.append(evaluation)
+            eligible.append((priority_order[priority], account.name.casefold(), evaluation))
+
+        selected_ids = {item.account_id for _, _, item in sorted(eligible)[:research_capacity]}
+        final = tuple(
+            AccountEvaluation(
+                item.account_id, AccountSelectionStatus.SELECTED_FOR_RESEARCH,
+                "Selected within current research capacity using explicit priority and alphabetical tie-breaking.",
+                item.candidate, item.interpretations, item.priority, item.has_negative_evidence,
+            ) if item.account_id in selected_ids else item
+            for item in provisional
+        )
+        # The queue is ordered by selected priority first; all other outcomes retain input order.
+        selected = sorted(
+            (item for item in final if item.status is AccountSelectionStatus.SELECTED_FOR_RESEARCH),
+            key=lambda item: (priority_order[item.priority], item.candidate.account.name.casefold()),  # type: ignore[index,union-attr]
+        )
+        return AccountResearchQueue(research_capacity, tuple(selected) + tuple(
+            item for item in final if item.status is not AccountSelectionStatus.SELECTED_FOR_RESEARCH
+        ))

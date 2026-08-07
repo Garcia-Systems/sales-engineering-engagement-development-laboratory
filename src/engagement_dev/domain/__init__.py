@@ -82,6 +82,51 @@ class Account:
     id: str
     name: str
     market_id: str
+    organization_type: str = ""
+    location: str = ""
+    public_description: str = ""
+    observed_characteristics: tuple[str, ...] = ()
+    evidence_references: tuple[str, ...] = ()
+    research_status: str = "UNRESEARCHED"
+
+
+@dataclass(frozen=True)
+class AccountEvidence:
+    """A sourced public observation about one account, before signal analysis."""
+
+    id: str
+    account_id: str
+    description: str
+    category: EvidenceCategory
+    source: str
+    relevant_problem_class_ids: tuple[str, ...] = ()
+    is_negative: bool = False
+
+    @property
+    def is_observed(self) -> bool:
+        return self.category in DIRECT_EVIDENCE_CATEGORIES
+
+
+@dataclass(frozen=True)
+class AccountInterpretation:
+    """A cautious analyst reading of evidence; never an observed customer fact."""
+
+    id: str
+    account_id: str
+    statement: str
+    evidence_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AccountCandidate:
+    """A reason to research an organization, not a prospect or opportunity."""
+
+    account: Account
+    selected_market: Market
+    supporting_evidence: tuple[AccountEvidence, ...]
+    relevant_market_characteristics: tuple[MarketCharacteristic, ...]
+    relevant_problem_class_ids: tuple[str, ...]
+    research_rationale: str
 
 
 @dataclass(frozen=True)
