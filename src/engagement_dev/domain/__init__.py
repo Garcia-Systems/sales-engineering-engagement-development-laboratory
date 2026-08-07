@@ -607,3 +607,62 @@ class ServiceOffer:
     problem_classes: tuple[ProblemClass, ...]
     proof_artifact_ids: tuple[str, ...]
     boundaries: tuple[OfferBoundary, ...]
+
+
+class OutreachChannel(StrEnum):
+    EMAIL = "EMAIL"
+    PROFESSIONAL_NETWORK = "PROFESSIONAL_NETWORK"
+    PHONE_PREPARATION = "PHONE_PREPARATION"
+    IN_PERSON_PREPARATION = "IN_PERSON_PREPARATION"
+
+
+class OutreachObjective(StrEnum):
+    VALIDATE_HYPOTHESIS = "VALIDATE_HYPOTHESIS"
+
+
+class OutreachStatus(StrEnum):
+    DRAFT = "DRAFT"
+    READY = "READY"
+    SENT_SIMULATED = "SENT_SIMULATED"
+    NO_RESPONSE = "NO_RESPONSE"
+    REPLIED = "REPLIED"
+    DECLINED = "DECLINED"
+
+
+@dataclass(frozen=True)
+class OutreachEvidence:
+    """A public message claim and the account evidence that supports it."""
+
+    claim: str
+    evidence_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OutreachMessage:
+    id: str
+    account_id: str
+    stakeholder_id: str
+    hypothesis_id: str
+    objective: OutreachObjective
+    channel: OutreachChannel
+    observation: str
+    relevance: str
+    credibility: str
+    validation_question: str
+    call_to_action: str
+    factual_claims: tuple[OutreachEvidence, ...]
+    credibility_proof_ids: tuple[str, ...]
+    body: str
+
+
+@dataclass(frozen=True)
+class OutreachAttempt:
+    """A simulation record. READY explicitly does not mean sent."""
+
+    message: OutreachMessage
+    status: OutreachStatus = OutreachStatus.DRAFT
+    actual_message_sent: bool = False
+
+    def __post_init__(self) -> None:
+        if self.actual_message_sent:
+            raise ValueError("This educational laboratory cannot send external communication.")

@@ -75,6 +75,16 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Chapter 8 Outreach Evaluation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_outreach_evaluation.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chapter 7 Stakeholder Mapping",
       "type": "debugpy",
       "request": "launch",
