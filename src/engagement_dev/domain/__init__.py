@@ -95,3 +95,56 @@ class UnsupportedHypothesisError(ValueError):
 
 class UnqualifiedEngagementError(ValueError):
     """Raised when someone attempts to create an engagement prematurely."""
+
+
+@dataclass(frozen=True)
+class Capability:
+    """A skill the provider can demonstrate, independent of any prospect."""
+
+    identifier: str
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class ProblemClass:
+    """A recognizable problem category and the capabilities relevant to it."""
+
+    identifier: str
+    name: str
+    description: str
+    relevant_capability_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProofArtifact:
+    """Fictional educational work that demonstrates named capabilities."""
+
+    identifier: str
+    name: str
+    description: str
+    capability_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OfferBoundary:
+    identifier: str
+    statement: str
+
+
+@dataclass(frozen=True)
+class CapabilityProfile:
+    provider_name: str
+    capabilities: tuple[Capability, ...]
+    proof_artifacts: tuple[ProofArtifact, ...]
+    boundaries: tuple[OfferBoundary, ...]
+
+
+@dataclass(frozen=True)
+class ServiceOffer:
+    identifier: str
+    statement: str
+    capability_ids: tuple[str, ...]
+    problem_classes: tuple[ProblemClass, ...]
+    proof_artifact_ids: tuple[str, ...]
+    boundaries: tuple[OfferBoundary, ...]
