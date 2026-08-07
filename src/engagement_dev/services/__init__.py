@@ -21,7 +21,14 @@ from engagement_dev.domain import (
     AccountEvidence,
     AccountInterpretation,
     AccountCandidate,
+    AccountResearchBrief,
+    EvidenceFreshness,
+    ResearchDimension,
+    SourceReliability,
+    PublicSourceType,
 )
+
+from datetime import date
 
 
 def create_hypothesis(
@@ -394,3 +401,79 @@ class AccountListBuilder:
         return AccountResearchQueue(research_capacity, tuple(selected) + tuple(
             item for item in final if item.status is not AccountSelectionStatus.SELECTED_FOR_RESEARCH
         ))
+
+
+class ResearchReadinessStatus(StrEnum):
+    RESEARCH_READY = "RESEARCH_READY"
+    MORE_RESEARCH_NEEDED = "MORE_RESEARCH_NEEDED"
+    INSUFFICIENT_PUBLIC_EVIDENCE = "INSUFFICIENT_PUBLIC_EVIDENCE"
+    CONFLICT_REQUIRES_REVIEW = "CONFLICT_REQUIRES_REVIEW"
+
+
+@dataclass(frozen=True)
+class ResearchReadinessResult:
+    status: ResearchReadinessStatus
+    reasons: tuple[str, ...]
+    stop_broad_research: bool
+
+
+def classify_freshness(observed_on: date, research_date: date) -> EvidenceFreshness:
+    """Current <= 90 days, aging <= 365 days, otherwise stale."""
+    age = (research_date - observed_on).days
+    if age < 0:
+        raise ValueError("Evidence cannot be dated after the scenario research date.")
+    if age <= 90:
+        return EvidenceFreshness.CURRENT
+    if age <= 365:
+        return EvidenceFreshness.AGING
+    return EvidenceFreshness.STALE
+
+
+def classify_source_reliability(source_type: PublicSourceType) -> SourceReliability:
+    """Apply the scenario's explicit categorical provenance policy."""
+    if source_type in {
+        PublicSourceType.COMPANY_WEBSITE,
+        PublicSourceType.PUBLIC_JOB_POSTING,
+        PublicSourceType.PRESS_RELEASE,
+        PublicSourceType.PUBLIC_VENDOR_PAGE,
+    }:
+        return SourceReliability.PRIMARY_PUBLIC_SOURCE
+    if source_type in {PublicSourceType.PUBLIC_NEWS_ARTICLE, PublicSourceType.PUBLIC_DIRECTORY}:
+        return SourceReliability.SECONDARY_PUBLIC_SOURCE
+    return SourceReliability.UNVERIFIED_PUBLIC_CLAIM
+
+
+class AccountResearchEvaluator:
+    """Evaluate research sufficiency, never opportunity or engagement merit."""
+
+    def evaluate(self, brief: AccountResearchBrief) -> ResearchReadinessResult:
+        if any(item.requires_review for item in brief.conflicts):
+            return ResearchReadinessResult(
+                ResearchReadinessStatus.CONFLICT_REQUIRES_REVIEW,
+                ("Contradictory evidence must be interpreted explicitly before signal analysis.",), False,
+            )
+        sourced = tuple(item for item in brief.evidence if item.source and item.source_type and item.source_reliability)
+        if len(sourced) < 2:
+            return ResearchReadinessResult(
+                ResearchReadinessStatus.INSUFFICIENT_PUBLIC_EVIDENCE,
+                ("At least two public evidence records with provenance are required.",), False,
+            )
+        dimensions = {item.dimension for item in sourced}
+        missing = []
+        if ResearchDimension.ORGANIZATION not in dimensions:
+            missing.append("Basic organization evidence is missing.")
+        if ResearchDimension.OPERATIONS not in dimensions:
+            missing.append("No operational workflow has been observed.")
+        if not brief.unknowns:
+            missing.append("Important unknowns have not been recorded.")
+        if missing:
+            return ResearchReadinessResult(ResearchReadinessStatus.MORE_RESEARCH_NEEDED, tuple(missing), False)
+        return ResearchReadinessResult(
+            ResearchReadinessStatus.RESEARCH_READY,
+            (
+                "Organization understood sufficiently",
+                "Operational workflows identified",
+                "Evidence provenance preserved",
+                "Important unknowns explicitly recorded",
+            ), True,
+        )

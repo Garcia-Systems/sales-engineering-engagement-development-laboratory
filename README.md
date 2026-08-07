@@ -27,6 +27,7 @@ python -m pip install -e '.[dev]'
 engagement-dev chapter-0
 engagement-dev chapter-2
 engagement-dev chapter-3
+engagement-dev chapter-4
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -42,7 +43,9 @@ The immutable domain records live in `engagement_dev.domain`; creation policies 
 
 Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account_list.md) implements **Selected Market → Account Evidence → Research Rationale → Account Research Queue** while keeping the queue distinct from an opportunity pipeline.
 
-Chapters 0–3 are implemented. Chapter 4 — **Researching an Account** is planned and is not yet implemented.
+[Chapter 4 — Researching an Account](chapters/chapter_04_researching_an_account.md) implements **Account Research Queue → Public Evidence → Account Research Brief → Research Readiness** while preserving facts, observations, inferences, unknowns, provenance, freshness, and conflicts.
+
+Chapters 0–4 are implemented. Chapter 5 — **Finding and Interpreting Signals** is planned and is not yet implemented.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -50,4 +53,4 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue through [Chapter 1](chapters/chapter_01_define_the_offer.md) and [Chapter 2](chapters/chapter_02_choosing_a_market.md), and then run [Chapter 3](chapters/chapter_03_building_an_account_list.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue through [Chapter 1](chapters/chapter_01_define_the_offer.md), [Chapter 2](chapters/chapter_02_choosing_a_market.md), and [Chapter 3](chapters/chapter_03_building_an_account_list.md), then run [Chapter 4](chapters/chapter_04_researching_an_account.md).
