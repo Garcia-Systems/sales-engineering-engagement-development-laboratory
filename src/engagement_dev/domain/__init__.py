@@ -53,6 +53,36 @@ class ResearchClaimType(StrEnum):
     OBSERVATION = "OBSERVATION"
 
 
+class SignalType(StrEnum):
+    HIRING = "HIRING"
+    EXPANSION = "EXPANSION"
+    NEW_LOCATION = "NEW_LOCATION"
+    NEW_PRODUCT_OR_SERVICE = "NEW_PRODUCT_OR_SERVICE"
+    TECHNOLOGY_CHANGE = "TECHNOLOGY_CHANGE"
+    PLATFORM_MIGRATION = "PLATFORM_MIGRATION"
+    ORGANIZATIONAL_CHANGE = "ORGANIZATIONAL_CHANGE"
+    ACQUISITION = "ACQUISITION"
+    PUBLIC_COMPLAINT = "PUBLIC_COMPLAINT"
+    PROCESS_CHANGE = "PROCESS_CHANGE"
+    REGULATORY_CHANGE = "REGULATORY_CHANGE"
+    PROCUREMENT_ACTIVITY = "PROCUREMENT_ACTIVITY"
+    LEADERSHIP_CHANGE = "LEADERSHIP_CHANGE"
+    VENDOR_CHANGE = "VENDOR_CHANGE"
+
+
+class SignalStrength(StrEnum):
+    """Strength of the basis to investigate, never purchase probability."""
+
+    WEAK = "WEAK"
+    MODERATE = "MODERATE"
+    STRONG = "STRONG"
+
+
+class SignalPolarity(StrEnum):
+    POSITIVE = "POSITIVE"
+    NEGATIVE = "NEGATIVE"
+
+
 DIRECT_EVIDENCE_CATEGORIES = frozenset(
     {
         EvidenceCategory.PUBLIC_FACT,
@@ -216,10 +246,66 @@ class ObservedSignal:
     description: str
     category: EvidenceCategory
     source: str
+    signal_type: SignalType | None = None
+    supporting_evidence: tuple[AccountEvidence, ...] = ()
+    observed_on: date | None = None
+    freshness: EvidenceFreshness | None = None
+    underlying_event_id: str = ""
+    interpretation: "SignalInterpretation | None" = None
+    polarity: SignalPolarity = SignalPolarity.POSITIVE
+
+    def __post_init__(self) -> None:
+        if not self.source.strip():
+            raise ValueError("A signal requires supporting evidence provenance.")
+        if self.supporting_evidence and any(
+            item.account_id != self.account_id for item in self.supporting_evidence
+        ):
+            raise ValueError("Signal evidence must belong to the signal account.")
 
     @property
     def is_direct_evidence(self) -> bool:
         return self.category in DIRECT_EVIDENCE_CATEGORIES
+
+
+@dataclass(frozen=True)
+class SignalInterpretation:
+    observation: str
+    possible_meaning: str
+    relevant_problem_class_ids: tuple[str, ...]
+    unresolved_questions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SignalCluster:
+    id: str
+    account_id: str
+    theme: str
+    signals: tuple[ObservedSignal, ...]
+    relevant_problem_class_ids: tuple[str, ...]
+    cluster_interpretation: str
+    unresolved_questions: tuple[str, ...]
+    strength: SignalStrength
+
+    def __post_init__(self) -> None:
+        if len(self.signals) < 2:
+            raise ValueError("A cluster requires at least two related signals.")
+        if any(signal.account_id != self.account_id for signal in self.signals):
+            raise ValueError("Cluster signals must belong to one account.")
+        shared = (
+            set(self.signals[0].interpretation.relevant_problem_class_ids)
+            if self.signals[0].interpretation
+            else set()
+        )
+        for signal in self.signals[1:]:
+            shared &= (
+                set(signal.interpretation.relevant_problem_class_ids)
+                if signal.interpretation
+                else set()
+            )
+        if not shared or not shared.intersection(self.relevant_problem_class_ids):
+            raise ValueError(
+                "Signals need a shared problem class; unrelated signals cannot be clustered."
+            )
 
 
 @dataclass(frozen=True)

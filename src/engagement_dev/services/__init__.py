@@ -26,6 +26,9 @@ from engagement_dev.domain import (
     ResearchDimension,
     SourceReliability,
     PublicSourceType,
+    SignalCluster,
+    SignalPolarity,
+    SignalStrength,
 )
 
 from datetime import date
@@ -476,4 +479,134 @@ class AccountResearchEvaluator:
                 "Evidence provenance preserved",
                 "Important unknowns explicitly recorded",
             ), True,
+        )
+
+
+class SignalEvaluationStatus(StrEnum):
+    SIGNAL_SUPPORTED = "SIGNAL_SUPPORTED"
+    SIGNAL_WEAK = "SIGNAL_WEAK"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    STALE_SIGNAL = "STALE_SIGNAL"
+    CONFLICTING_EVIDENCE = "CONFLICTING_EVIDENCE"
+    OUTSIDE_SUPPORTED_OFFER = "OUTSIDE_SUPPORTED_OFFER"
+
+
+@dataclass(frozen=True)
+class SignalEvaluation:
+    signal: ObservedSignal
+    status: SignalEvaluationStatus
+    strength: SignalStrength
+    reasons: tuple[str, ...]
+    independent_event_ids: tuple[str, ...]
+    weakened_interpretation: str = ""
+
+
+class SignalEvaluator:
+    """Explain whether evidence justifies questions, without predicting a purchase."""
+
+    _generic_phrases = ("committed to innovation", "digital transformation")
+
+    def evaluate(
+        self, signal: ObservedSignal, supported_problem_class_ids: tuple[str, ...]
+    ) -> SignalEvaluation:
+        interpretation = signal.interpretation
+        events = tuple(
+            dict.fromkeys(
+                (signal.underlying_event_id or item.id)
+                for item in signal.supporting_evidence
+            )
+        )
+        if not signal.supporting_evidence or not signal.is_direct_evidence:
+            return SignalEvaluation(
+                signal,
+                SignalEvaluationStatus.INSUFFICIENT_EVIDENCE,
+                SignalStrength.WEAK,
+                ("No direct account-research evidence supports this observation.",),
+                events,
+            )
+        if any(
+            phrase in signal.description.casefold() for phrase in self._generic_phrases
+        ):
+            return SignalEvaluation(
+                signal,
+                SignalEvaluationStatus.INSUFFICIENT_EVIDENCE,
+                SignalStrength.WEAK,
+                (
+                    "Generic marketing language provides no specific operational observation.",
+                ),
+                events,
+            )
+        if signal.freshness is EvidenceFreshness.STALE:
+            return SignalEvaluation(
+                signal,
+                SignalEvaluationStatus.STALE_SIGNAL,
+                SignalStrength.WEAK,
+                (
+                    "The event may remain historically true, but its investigative relevance has decayed.",
+                ),
+                events,
+            )
+        relevant = set(
+            interpretation.relevant_problem_class_ids if interpretation else ()
+        )
+        overlap = relevant.intersection(supported_problem_class_ids)
+        if not overlap:
+            return SignalEvaluation(
+                signal,
+                SignalEvaluationStatus.OUTSIDE_SUPPORTED_OFFER,
+                SignalStrength.WEAK,
+                (
+                    "The observation has no explicit connection to a supported problem class.",
+                ),
+                events,
+            )
+        weakened = ""
+        if signal.polarity is SignalPolarity.NEGATIVE:
+            weakened = "New evidence may weaken or make an earlier interpretation obsolete; stakeholder validation is still required."
+        return SignalEvaluation(
+            signal,
+            SignalEvaluationStatus.SIGNAL_SUPPORTED,
+            SignalStrength.MODERATE,
+            (
+                "Current, specific evidence connects cautiously to a supported problem class.",
+                "Substantial uncertainty remains; no customer problem or purchase intent is established.",
+            ),
+            events,
+            weakened,
+        )
+
+    def build_cluster(
+        self,
+        *,
+        identifier: str,
+        account_id: str,
+        theme: str,
+        evaluations: tuple[SignalEvaluation, ...],
+        interpretation: str,
+        questions: tuple[str, ...],
+    ) -> SignalCluster:
+        supported = tuple(
+            item.signal
+            for item in evaluations
+            if item.status is SignalEvaluationStatus.SIGNAL_SUPPORTED
+        )
+        event_ids = {signal.underlying_event_id or signal.id for signal in supported}
+        problem_sets = [
+            set(signal.interpretation.relevant_problem_class_ids)
+            for signal in supported
+            if signal.interpretation
+        ]
+        shared = set.intersection(*problem_sets) if problem_sets else set()
+        strength = (
+            SignalStrength.STRONG if len(event_ids) >= 2 else SignalStrength.MODERATE
+        )
+        return SignalCluster(
+            identifier,
+            account_id,
+            theme,
+            supported,
+            tuple(sorted(shared)),
+            interpretation,
+            questions,
+            strength,
         )
