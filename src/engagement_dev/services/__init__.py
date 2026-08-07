@@ -33,6 +33,17 @@ from engagement_dev.domain import (
     EvidenceChainLink,
     HypothesisStatus,
     HypothesisUnknown,
+    AuthorityStatus,
+    EvidenceProximity,
+    KnowledgeDomain,
+    OrganizationalRole,
+    QuestionProximity,
+    RelationshipType,
+    Stakeholder,
+    StakeholderEvidence,
+    StakeholderMap,
+    StakeholderRelationship,
+    ValidationQuestionMapping,
 )
 
 from datetime import date
@@ -736,3 +747,115 @@ class OpportunityHypothesisEvaluator:
             outcome, findings, hypothesis.evidence_ids, hypothesis.assumptions,
             hypothesis.unknowns, hypothesis.falsification_conditions,
         )
+
+
+class DomainCoverage(StrEnum):
+    COVERED = "COVERED"
+    UNKNOWN = "UNKNOWN"
+
+
+class CoverageStatus(StrEnum):
+    COVERAGE_READY = "COVERAGE_READY"
+    PARTIAL_COVERAGE = "PARTIAL_COVERAGE"
+    IMPORTANT_GAPS = "IMPORTANT_GAPS"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+
+@dataclass(frozen=True)
+class ValidationCoverage:
+    by_domain: tuple[tuple[KnowledgeDomain, DomainCoverage], ...]
+    status: CoverageStatus
+    rationale: str
+
+
+class ContactPriority(StrEnum):
+    """Priority for learning, explicitly not likelihood of purchase."""
+
+    PRIMARY_VALIDATION_CONTACT = "PRIMARY_VALIDATION_CONTACT"
+    SECONDARY_VALIDATION_CONTACT = "SECONDARY_VALIDATION_CONTACT"
+    LATER_STAGE_CONTACT = "LATER_STAGE_CONTACT"
+    INSUFFICIENT_RELEVANCE = "INSUFFICIENT_RELEVANCE"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True)
+class ContactPriorityDecision:
+    stakeholder_id: str
+    priority: ContactPriority
+    rationale: str
+
+
+class StakeholderMapper:
+    """Construct and evaluate an evidence map without inferring buyer status."""
+
+    def build(
+        self, *, account_id: str, hypothesis_id: str,
+        stakeholders: tuple[Stakeholder, ...],
+        relationships: tuple[StakeholderRelationship, ...],
+        question_mappings: tuple[ValidationQuestionMapping, ...],
+    ) -> StakeholderMap:
+        ids = {item.contact.id for item in stakeholders}
+        evidence_ids = {evidence.id for item in stakeholders for evidence in item.evidence}
+        if any(item.account_id != account_id for item in stakeholders):
+            raise ValueError("All stakeholders must belong to the mapped account.")
+        if any(item.source_contact_id not in ids or item.target_contact_id not in ids for item in relationships):
+            raise ValueError("Relationships may reference only mapped contacts.")
+        if any(not set(item.evidence_ids) <= evidence_ids for item in relationships):
+            raise ValueError("Relationship provenance must be present in stakeholder evidence.")
+        if any(not set(item.stakeholder_ids) <= ids for item in question_mappings):
+            raise ValueError("Question mappings may reference only mapped stakeholders.")
+        return StakeholderMap(account_id, hypothesis_id, stakeholders, relationships, question_mappings)
+
+    def evaluate_coverage(
+        self, stakeholder_map: StakeholderMap,
+        domains: tuple[KnowledgeDomain, ...],
+    ) -> ValidationCoverage:
+        mapped = {domain for item in stakeholder_map.stakeholders for domain in item.knowledge_domains}
+        coverage = tuple(
+            (domain, DomainCoverage.COVERED if domain in mapped else DomainCoverage.UNKNOWN)
+            for domain in domains
+        )
+        foundational = {KnowledgeDomain.WORKFLOW, KnowledgeDomain.TECHNOLOGY, KnowledgeDomain.BUSINESS_IMPACT}
+        covered = {domain for domain, status in coverage if status is DomainCoverage.COVERED}
+        if foundational <= covered:
+            status = CoverageStatus.COVERAGE_READY
+            rationale = "Core hypothesis domains have plausible evidence sources; finance and procurement may remain unknown for an initial conversation."
+        elif covered & foundational:
+            status = CoverageStatus.PARTIAL_COVERAGE
+            rationale = "Some core evidence domains have plausible sources, but important perspectives are missing."
+        elif covered:
+            status = CoverageStatus.IMPORTANT_GAPS
+            rationale = "Mapped knowledge does not cover the core validation questions."
+        else:
+            status = CoverageStatus.INSUFFICIENT_EVIDENCE
+            rationale = "No supported stakeholder knowledge covers the requested domains."
+        return ValidationCoverage(coverage, status, rationale)
+
+    def prioritize(self, stakeholder_map: StakeholderMap) -> tuple[ContactPriorityDecision, ...]:
+        mapped_questions = {item.question for item in stakeholder_map.question_mappings if item.stakeholder_ids}
+        ranked: list[tuple[int, int, Stakeholder]] = []
+        weights = {EvidenceProximity.DIRECT: 3, EvidenceProximity.NEAR: 2, EvidenceProximity.INDIRECT: 1, EvidenceProximity.UNKNOWN: 0}
+        for order, stakeholder in enumerate(stakeholder_map.stakeholders):
+            relevant = tuple(item for item in stakeholder.question_proximities if item.validation_question in mapped_questions)
+            score = sum(weights[item.proximity] for item in relevant)
+            ranked.append((-score, order, stakeholder))
+        ranked.sort(key=lambda item: (item[0], item[1]))
+        positive = [item for item in ranked if item[0] < 0]
+        primary_id = positive[0][2].contact.id if positive else ""
+        decisions = []
+        for negative_score, _, stakeholder in ranked:
+            score = -negative_score
+            if stakeholder.contact.id == primary_id:
+                priority = ContactPriority.PRIMARY_VALIDATION_CONTACT
+                rationale = "Supported responsibilities and direct question-specific proximity make this person the closest source for current validation evidence."
+            elif score >= 2:
+                priority = ContactPriority.SECONDARY_VALIDATION_CONTACT
+                rationale = "This person can add a supported perspective to current validation questions."
+            elif score == 1:
+                priority = ContactPriority.LATER_STAGE_CONTACT
+                rationale = "This person's supported knowledge is less direct for the current questions."
+            else:
+                priority = ContactPriority.UNKNOWN
+                rationale = "Current evidence does not establish proximity to a mapped validation question."
+            decisions.append(ContactPriorityDecision(stakeholder.contact.id, priority, rationale))
+        return tuple(decisions)
