@@ -4,6 +4,9 @@ from dataclasses import dataclass
 
 from engagement_dev.domain import Account, EvidenceCategory, Market, ObservedSignal
 from engagement_dev.scenarios.chapter_one import chapter_one_report, evaluate_chapter_one, load_chapter_one
+from engagement_dev.scenarios.chapter_two import (
+    chapter_two_report, chapter_two_research_cycle, evaluate_chapter_two, load_chapter_two,
+)
 from engagement_dev.services import create_hypothesis
 
 
