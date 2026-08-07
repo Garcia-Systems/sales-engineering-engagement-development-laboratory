@@ -93,6 +93,16 @@
         "PYTHONPATH": "${workspaceFolder}/src"
       },
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 9 First Conversation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_first_conversation.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
     }
   ]
 }

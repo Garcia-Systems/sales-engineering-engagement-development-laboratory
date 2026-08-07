@@ -45,6 +45,9 @@ from engagement_dev.domain import (
     StakeholderRelationship,
     ValidationQuestionMapping,
     OutreachAttempt, OutreachChannel, OutreachMessage, OutreachObjective, OutreachStatus,
+    Conversation, ConversationEvidence, ConversationObjective, ConversationQuestion, ConversationStage,
+    ConversationStatus, HypothesisOutcome, QuestionType, StatementRelationship,
+    StakeholderStatement,
 )
 
 from datetime import date
@@ -931,3 +934,92 @@ class OutreachChannelAdapter:
         if channel is OutreachChannel.EMAIL:
             return " ".join((message.observation, message.relevance, message.credibility, message.validation_question, message.call_to_action))
         return "\n".join((f"OBSERVATION: {message.observation}", f"QUESTION: {message.validation_question}", f"NEXT STEP: {message.call_to_action}"))
+
+
+class ConversationEvaluationOutcome(StrEnum):
+    DISCOVERY_COMPLETE = "DISCOVERY_COMPLETE"
+    MORE_DISCOVERY_NEEDED = "MORE_DISCOVERY_NEEDED"
+    ASSUMPTION_LED = "ASSUMPTION_LED"
+    PITCH_PREMATURE = "PITCH_PREMATURE"
+    INSUFFICIENT_EVIDENCE_CAPTURE = "INSUFFICIENT_EVIDENCE_CAPTURE"
+
+
+@dataclass(frozen=True)
+class ConversationEvaluation:
+    outcome: ConversationEvaluationOutcome
+    findings: tuple[str, ...]
+
+
+class ConversationEvaluator:
+    """Explainable discovery checks; no score, forecast, or solution selection."""
+
+    _loaded_terms = (
+        "how bad", "how much money", "broken workflow", "broken system",
+        "why haven't", "why haven’t", "who has the budget", "integration problems",
+    )
+    _pitch_terms = (
+        "schedule a demo", "our solution", "build an integration", "send a proposal",
+        "buy our", "implement our",
+    )
+
+    def is_neutral(self, question: ConversationQuestion | str) -> bool:
+        text = question.text if isinstance(question, ConversationQuestion) else question
+        folded = text.casefold()
+        return text.strip().endswith("?") and not any(term in folded for term in self._loaded_terms)
+
+    def select_follow_up(self, statement: StakeholderStatement) -> ConversationQuestion:
+        """Follow the disclosed evidence instead of advancing a fixed questionnaire."""
+        text = statement.statement.casefold()
+        if "manually" in text or "manual" in text:
+            prompt = "Which event details have to be transferred manually?"
+        elif "separate" in text or "event booking" in text:
+            prompt = "What information moves between the event workflow and property operations?"
+        elif statement.relationship is StatementRelationship.CONTRADICTS:
+            prompt = "What parts of the current process work particularly well?"
+        else:
+            prompt = "Could you say more about what happens in that workflow?"
+        return ConversationQuestion(prompt, QuestionType.WORKFLOW, ConversationStage.CLARIFY)
+
+    def evaluate(self, conversation: Conversation) -> ConversationEvaluation:
+        text = " ".join(item.text for item in conversation.questions).casefold()
+        if any(term in text for term in self._pitch_terms) or any(
+            term in conversation.next_step.casefold() for term in self._pitch_terms
+        ):
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.PITCH_PREMATURE,
+                ("The conversation selected a pitch or solution before discovery established one.",),
+            )
+        if any(not self.is_neutral(item) for item in conversation.questions):
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.ASSUMPTION_LED,
+                ("At least one question assumes pain, cost, or buying conditions.",),
+            )
+        captured = {item.statement for item in conversation.stakeholder_statements}
+        evidence_statements = {item.statement.statement for item in conversation.evidence_captured}
+        if not captured or captured != evidence_statements:
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.INSUFFICIENT_EVIDENCE_CAPTURE,
+                ("Every stakeholder statement must remain traceable and separate from interpretation.",),
+            )
+        if conversation.objective is not ConversationObjective.VALIDATE_OPPORTUNITY_HYPOTHESIS:
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.ASSUMPTION_LED,
+                ("The conversation is not aligned to hypothesis validation.",),
+            )
+        if not conversation.unresolved_questions:
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.INSUFFICIENT_EVIDENCE_CAPTURE,
+                ("Discovery must preserve material unknowns.",),
+            )
+        if conversation.status is not ConversationStatus.COMPLETED:
+            return ConversationEvaluation(
+                ConversationEvaluationOutcome.MORE_DISCOVERY_NEEDED,
+                ("The simulated conversation has not been completed.",),
+            )
+        return ConversationEvaluation(
+            ConversationEvaluationOutcome.DISCOVERY_COMPLETE,
+            (
+                "The conversation reduced uncertainty with neutral, traceable evidence.",
+                "A refutation is valid discovery; completion does not imply qualification.",
+            ),
+        )

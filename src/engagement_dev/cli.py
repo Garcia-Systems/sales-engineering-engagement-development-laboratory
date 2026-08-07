@@ -2,12 +2,12 @@
 
 import argparse
 
-from engagement_dev.scenarios import chapter_eight_report, chapter_five_report, chapter_four_report, chapter_one_report, chapter_seven_report, chapter_six_report, chapter_three_report, chapter_two_report, chapter_zero_report
+from engagement_dev.scenarios import chapter_eight_report, chapter_five_report, chapter_four_report, chapter_nine_report, chapter_one_report, chapter_seven_report, chapter_six_report, chapter_three_report, chapter_two_report, chapter_zero_report
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="engagement-dev")
-    parser.add_argument("chapter", choices=tuple(f"chapter-{number}" for number in range(9)), help="chapter scenario to run")
+    parser.add_argument("chapter", choices=tuple(f"chapter-{number}" for number in range(10)), help="chapter scenario to run")
     return parser
 
 
@@ -31,6 +31,8 @@ def main(argv: list[str] | None = None) -> int:
         print(chapter_seven_report(), end="")
     elif args.chapter == "chapter-8":
         print(chapter_eight_report(), end="")
+    elif args.chapter == "chapter-9":
+        print(chapter_nine_report(), end="")
     return 0
 
 
