@@ -9,6 +9,14 @@
       "args": ["chapter-0"],
       "env": {"PYTHONPATH": "${workspaceFolder}/src"},
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 1 Offer Evaluation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_offer_evaluation.py",
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
     }
   ]
 }
