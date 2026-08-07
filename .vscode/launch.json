@@ -25,6 +25,14 @@
       "program": "${workspaceFolder}/examples/debug_market_evaluation.py",
       "env": {"PYTHONPATH": "${workspaceFolder}/src"},
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 3 Account Selection",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_account_selection.py",
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
     }
   ]
 }
