@@ -1,7 +1,7 @@
 """Policies that prevent desire from being mistaken for evidence."""
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from engagement_dev.domain import (
@@ -29,6 +29,10 @@ from engagement_dev.domain import (
     SignalCluster,
     SignalPolarity,
     SignalStrength,
+    Assumption,
+    EvidenceChainLink,
+    HypothesisStatus,
+    HypothesisUnknown,
 )
 
 from datetime import date
@@ -609,4 +613,126 @@ class SignalEvaluator:
             interpretation,
             questions,
             strength,
+        )
+
+
+class HypothesisEvaluationOutcome(StrEnum):
+    SUPPORTED_FOR_VALIDATION = "SUPPORTED_FOR_VALIDATION"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    TOO_BROAD = "TOO_BROAD"
+    SOLUTION_PREMATURE = "SOLUTION_PREMATURE"
+    CONTRADICTED_BY_EVIDENCE = "CONTRADICTED_BY_EVIDENCE"
+    OUTSIDE_SUPPORTED_OFFER = "OUTSIDE_SUPPORTED_OFFER"
+
+
+@dataclass(frozen=True)
+class OpportunityHypothesisEvaluation:
+    outcome: HypothesisEvaluationOutcome
+    findings: tuple[str, ...]
+    supporting_evidence_ids: tuple[str, ...]
+    assumptions: tuple[Assumption, ...]
+    unanswered_questions: tuple[HypothesisUnknown, ...]
+    falsification_paths: tuple[str, ...]
+
+
+class OpportunityHypothesisBuilder:
+    """Build a traceable draft while keeping evidence, assumptions, and unknowns separate."""
+
+    def build(
+        self, *, identifier: str, account: Account, statement: str,
+        cluster: SignalCluster, supporting_signals: tuple[ObservedSignal, ...],
+        relevant_problem_class_ids: tuple[str, ...], reasoning: str,
+        assumptions: tuple[Assumption, ...], unknowns: tuple[HypothesisUnknown, ...],
+        falsification_conditions: tuple[str, ...], validation_questions: tuple[str, ...],
+        competing_group_id: str = "",
+    ) -> OpportunityHypothesis:
+        if cluster.account_id != account.id or any(s.account_id != account.id for s in supporting_signals):
+            raise UnsupportedHypothesisError("The account, cluster, and signals must refer to one account.")
+        cluster_ids = {item.id for item in cluster.signals}
+        if not supporting_signals or not {item.id for item in supporting_signals} <= cluster_ids:
+            raise UnsupportedHypothesisError("At least one supported signal from the cluster is required.")
+        evidence = tuple(dict.fromkeys(
+            item.id for signal in supporting_signals for item in signal.supporting_evidence
+            if item.is_observed
+        ))
+        if not evidence:
+            raise UnsupportedHypothesisError("Traceable observed evidence is required.")
+        if not relevant_problem_class_ids or not set(relevant_problem_class_ids) <= set(cluster.relevant_problem_class_ids):
+            raise UnsupportedHypothesisError("A relevant cluster-supported problem class is required.")
+        if not unknowns:
+            raise UnsupportedHypothesisError("Important unknowns must be explicit.")
+        if not falsification_conditions:
+            raise UnsupportedHypothesisError("A hypothesis must be falsifiable.")
+        chain = tuple(
+            EvidenceChainLink(item.id, signal.id)
+            for signal in supporting_signals for item in signal.supporting_evidence
+            if item.is_observed
+        )
+        return OpportunityHypothesis(
+            identifier, account.id, statement, evidence,
+            tuple(item.id for item in supporting_signals), cluster.id,
+            relevant_problem_class_ids, reasoning, assumptions, unknowns,
+            falsification_conditions, validation_questions, chain,
+            HypothesisStatus.DRAFT, competing_group_id,
+        )
+
+
+class OpportunityHypothesisEvaluator:
+    """Apply explainable epistemic rules without probabilities or sales scoring."""
+
+    _solution_nouns = ("api", "platform", "software", "integration platform", "custom solution")
+    _prescriptive = ("needs", "must buy", "should implement", "requires our")
+    _certainty = ("definitely", "guaranteed", "will fail", "clearly needs", "systems are broken", "is failing")
+    _cautious = (" may ", " might ", " could ", "potentially", "investigating whether")
+    _customer_intent = ("wants to buy", "wants our", "is ready to buy", "will hire us", "seeks external help")
+
+    def evaluate(
+        self, hypothesis: OpportunityHypothesis, *, signals: tuple[ObservedSignal, ...],
+        supported_problem_class_ids: tuple[str, ...], contradictory_evidence_ids: tuple[str, ...] = (),
+    ) -> tuple[OpportunityHypothesis, OpportunityHypothesisEvaluation]:
+        statement = f" {hypothesis.cautious_statement.casefold()} "
+        findings: tuple[str, ...]
+        has_stakeholder_evidence = any(
+            evidence.category.value == "STAKEHOLDER_STATEMENT"
+            for signal in signals for evidence in signal.supporting_evidence
+        )
+        if any(term in statement for term in self._customer_intent) and not has_stakeholder_evidence:
+            outcome = HypothesisEvaluationOutcome.INSUFFICIENT_EVIDENCE
+            findings = ("Customer intent cannot be claimed without stakeholder evidence.",)
+        elif any(term in statement for term in self._prescriptive) and any(noun in statement for noun in self._solution_nouns):
+            outcome = HypothesisEvaluationOutcome.SOLUTION_PREMATURE
+            findings = ("The statement prescribes a technical solution before the business problem is validated.",)
+        elif any(term in statement for term in self._certainty):
+            outcome = HypothesisEvaluationOutcome.INSUFFICIENT_EVIDENCE
+            findings = ("The statement asserts certainty or failure that the evidence does not establish.",)
+        elif not any(term in statement for term in self._cautious):
+            outcome = HypothesisEvaluationOutcome.TOO_BROAD
+            findings = ("The statement is not framed as a cautious, testable possible problem.",)
+        elif not set(hypothesis.relevant_problem_class_ids) <= set(supported_problem_class_ids):
+            outcome = HypothesisEvaluationOutcome.OUTSIDE_SUPPORTED_OFFER
+            findings = ("The proposed problem class is outside the supported offer.",)
+        elif set(hypothesis.evidence_ids).intersection(contradictory_evidence_ids):
+            outcome = HypothesisEvaluationOutcome.CONTRADICTED_BY_EVIDENCE
+            findings = ("Explicit contradictory evidence prevents normal support.",)
+        else:
+            by_id = {item.id: item for item in signals}
+            selected = tuple(by_id[item] for item in hypothesis.supporting_signal_ids if item in by_id)
+            if (not selected or all(item.freshness is EvidenceFreshness.STALE for item in selected)
+                    or not hypothesis.evidence_ids):
+                outcome = HypothesisEvaluationOutcome.INSUFFICIENT_EVIDENCE
+                findings = ("Current traceable signal evidence is required.",)
+            else:
+                outcome = HypothesisEvaluationOutcome.SUPPORTED_FOR_VALIDATION
+                findings = (
+                    "Evidence supports testing this explanation with stakeholders.",
+                    "Support for validation is provisional and does not mean validated.",
+                )
+        status = {
+            HypothesisEvaluationOutcome.SUPPORTED_FOR_VALIDATION: HypothesisStatus.SUPPORTED_FOR_VALIDATION,
+            HypothesisEvaluationOutcome.CONTRADICTED_BY_EVIDENCE: HypothesisStatus.CONTRADICTED,
+        }.get(outcome, HypothesisStatus.INSUFFICIENT_EVIDENCE)
+        evaluated = replace(hypothesis, status=status)
+        return evaluated, OpportunityHypothesisEvaluation(
+            outcome, findings, hypothesis.evidence_ids, hypothesis.assumptions,
+            hypothesis.unknowns, hypothesis.falsification_conditions,
         )

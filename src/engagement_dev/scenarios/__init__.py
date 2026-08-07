@@ -14,6 +14,7 @@ from engagement_dev.scenarios.chapter_four import (
     chapter_four_report, evaluate_chapter_four, load_chapter_four,
 )
 from engagement_dev.scenarios.chapter_five import analyze_chapter_five, chapter_five_report
+from engagement_dev.scenarios.chapter_six import analyze_chapter_six, chapter_six_report
 from engagement_dev.services import create_hypothesis
 
 

@@ -83,6 +83,34 @@ class SignalPolarity(StrEnum):
     NEGATIVE = "NEGATIVE"
 
 
+class HypothesisStatus(StrEnum):
+    DRAFT = "DRAFT"
+    SUPPORTED_FOR_VALIDATION = "SUPPORTED_FOR_VALIDATION"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    CONTRADICTED = "CONTRADICTED"
+    VALIDATED = "VALIDATED"
+    REFUTED = "REFUTED"
+
+
+class AssumptionStatus(StrEnum):
+    UNVALIDATED = "UNVALIDATED"
+    SUPPORTED = "SUPPORTED"
+    REFUTED = "REFUTED"
+
+
+class UnknownCategory(StrEnum):
+    PROBLEM_EXISTENCE = "PROBLEM_EXISTENCE"
+    PROBLEM_SEVERITY = "PROBLEM_SEVERITY"
+    CURRENT_PROCESS = "CURRENT_PROCESS"
+    TECHNICAL_ENVIRONMENT = "TECHNICAL_ENVIRONMENT"
+    BUSINESS_IMPACT = "BUSINESS_IMPACT"
+    STAKEHOLDER = "STAKEHOLDER"
+    URGENCY = "URGENCY"
+    BUDGET = "BUDGET"
+    DECISION_PROCESS = "DECISION_PROCESS"
+    EXTERNAL_HELP_ACCEPTANCE = "EXTERNAL_HELP_ACCEPTANCE"
+
+
 DIRECT_EVIDENCE_CATEGORIES = frozenset(
     {
         EvidenceCategory.PUBLIC_FACT,
@@ -309,11 +337,45 @@ class SignalCluster:
 
 
 @dataclass(frozen=True)
+class Assumption:
+    """A necessary proposition that must never be presented as evidence."""
+
+    id: str
+    statement: str
+    status: AssumptionStatus = AssumptionStatus.UNVALIDATED
+
+
+@dataclass(frozen=True)
+class HypothesisUnknown:
+    category: UnknownCategory
+    question: str
+
+
+@dataclass(frozen=True)
+class EvidenceChainLink:
+    evidence_id: str
+    signal_id: str
+
+
+@dataclass(frozen=True)
 class OpportunityHypothesis:
+    """A provisional, evidence-linked explanation—not a confirmed problem."""
+
     id: str
     account_id: str
     cautious_statement: str
     evidence_ids: tuple[str, ...]
+    supporting_signal_ids: tuple[str, ...] = ()
+    signal_cluster_id: str = ""
+    relevant_problem_class_ids: tuple[str, ...] = ()
+    reasoning: str = ""
+    assumptions: tuple[Assumption, ...] = ()
+    unknowns: tuple[HypothesisUnknown, ...] = ()
+    falsification_conditions: tuple[str, ...] = ()
+    validation_questions: tuple[str, ...] = ()
+    evidence_chain: tuple[EvidenceChainLink, ...] = ()
+    status: HypothesisStatus = HypothesisStatus.DRAFT
+    competing_group_id: str = ""
 
 
 @dataclass(frozen=True)

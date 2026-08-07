@@ -43,6 +43,14 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Chapter 6 Opportunity Hypothesis",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_opportunity_hypothesis.py",
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chapter 4 Account Research",
       "type": "debugpy",
       "request": "launch",

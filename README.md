@@ -29,6 +29,7 @@ engagement-dev chapter-2
 engagement-dev chapter-3
 engagement-dev chapter-4
 engagement-dev chapter-5
+engagement-dev chapter-6
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -48,7 +49,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 5 — Finding and Interpreting Signals](chapters/chapter_05_finding_and_interpreting_signals.md) implements **Account Research Brief → Candidate Observations → Signal Evaluation → Signal Clusters → Investigation Questions**. It preserves **Signal ≠ Problem**, detects duplicate reporting, and creates no opportunity hypothesis.
 
-Chapters 0–5 are implemented. Chapter 6 — **Forming an Opportunity Hypothesis** is planned and is not yet implemented.
+[Chapter 6 — Forming an Opportunity Hypothesis](chapters/chapter_06_forming_an_opportunity_hypothesis.md) implements **Signal Cluster → Candidate Explanations → Opportunity Hypothesis → Validation Questions**. It preserves assumptions, unknowns, falsification paths, and competing explanations while enforcing **Possible Problem ≠ Proposed Solution**.
+
+Chapters 0–6 are implemented. Chapter 7 — **Mapping the Buying Organization** is planned and is not yet implemented.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -56,4 +59,4 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue through [Chapter 1](chapters/chapter_01_define_the_offer.md), [Chapter 2](chapters/chapter_02_choosing_a_market.md), [Chapter 3](chapters/chapter_03_building_an_account_list.md), and [Chapter 4](chapters/chapter_04_researching_an_account.md), then run [Chapter 5](chapters/chapter_05_finding_and_interpreting_signals.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through [Chapter 5](chapters/chapter_05_finding_and_interpreting_signals.md), then form a provisional explanation in [Chapter 6](chapters/chapter_06_forming_an_opportunity_hypothesis.md).
