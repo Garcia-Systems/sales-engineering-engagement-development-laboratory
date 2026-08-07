@@ -31,6 +31,7 @@ engagement-dev chapter-4
 engagement-dev chapter-5
 engagement-dev chapter-6
 engagement-dev chapter-7
+engagement-dev chapter-8
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -54,7 +55,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 7 — Mapping the Buying Organization](chapters/chapter_07_mapping_the_buying_organization.md) implements **Opportunity Hypothesis → Validation Questions → Knowledge Needed → Stakeholder Map → Evidence-Oriented Contact Priority** while preserving unknown authority and sending no outreach.
 
-Chapters 0–7 are implemented. Chapter 8 — **Designing Evidence-Based Outreach** is planned and is not yet implemented.
+[Chapter 8 — Designing Evidence-Based Outreach](chapters/chapter_08_designing_evidence_based_outreach.md) implements **Public Evidence + Opportunity Hypothesis + Stakeholder Relevance + Supported Credibility → Outreach Draft → Evidence Validation → READY** while sending no external communication.
+
+Chapters 0–8 are implemented. Chapter 9 — **Running the First Conversation** is recommended next and is not yet implemented.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -62,4 +65,4 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through [Chapter 6](chapters/chapter_06_forming_an_opportunity_hypothesis.md), then map plausible evidence sources in [Chapter 7](chapters/chapter_07_mapping_the_buying_organization.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through [Chapter 7](chapters/chapter_07_mapping_the_buying_organization.md), then design a supported, unsent message in [Chapter 8](chapters/chapter_08_designing_evidence_based_outreach.md).

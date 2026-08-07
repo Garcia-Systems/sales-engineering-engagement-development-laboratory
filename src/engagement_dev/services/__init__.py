@@ -44,6 +44,7 @@ from engagement_dev.domain import (
     StakeholderMap,
     StakeholderRelationship,
     ValidationQuestionMapping,
+    OutreachAttempt, OutreachChannel, OutreachMessage, OutreachObjective, OutreachStatus,
 )
 
 from datetime import date
@@ -859,3 +860,74 @@ class StakeholderMapper:
                 rationale = "Current evidence does not establish proximity to a mapped validation question."
             decisions.append(ContactPriorityDecision(stakeholder.contact.id, priority, rationale))
         return tuple(decisions)
+
+
+class OutreachEvaluationOutcome(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    UNSUPPORTED_CLAIM = "UNSUPPORTED_CLAIM"
+    REJECTED_ASSUMPTIONS = "REJECTED_ASSUMPTIONS"
+    INSUFFICIENT_RELEVANCE = "INSUFFICIENT_RELEVANCE"
+    SOLUTION_PREMATURE = "SOLUTION_PREMATURE"
+    TOO_BROAD = "TOO_BROAD"
+    CTA_TOO_AGGRESSIVE = "CTA_TOO_AGGRESSIVE"
+
+
+@dataclass(frozen=True)
+class OutreachEvaluation:
+    outcome: OutreachEvaluationOutcome
+    findings: tuple[str, ...]
+
+
+class OutreachEvaluator:
+    """Ordered, explainable outreach rules; no score and no sending capability."""
+
+    _assumptions = ("must be causing", "systems are broken", "losing money", "definitely have", "serious integration problems")
+    _solutions = ("build an api", "build software", "fix your systems", "implement our", "our solution")
+    _aggressive_ctas = ("schedule a demo", "send you a proposal", "when can we start", "who controls the budget", "sign up")
+    _fabricated_proof = ("our customers", "case study", "certified", "partner", "saved clients", "guaranteed")
+
+    def evaluate(
+        self, message: OutreachMessage, *, account_evidence_ids: tuple[str, ...],
+        stakeholder: Stakeholder, proof_artifact_ids: tuple[str, ...], max_words: int | None = None,
+    ) -> OutreachEvaluation:
+        text = message.body.casefold()
+        cited = {item for claim in message.factual_claims for item in claim.evidence_ids}
+        available_public_evidence = set(account_evidence_ids) | {item.id for item in stakeholder.evidence}
+        if any(not claim.evidence_ids for claim in message.factual_claims) or not cited <= available_public_evidence:
+            return OutreachEvaluation(OutreachEvaluationOutcome.UNSUPPORTED_CLAIM, ("Every factual account or stakeholder claim must cite available public evidence.",))
+        if any(term in text for term in self._fabricated_proof) or not set(message.credibility_proof_ids) <= set(proof_artifact_ids):
+            return OutreachEvaluation(OutreachEvaluationOutcome.UNSUPPORTED_CLAIM, ("Credibility and social proof must trace to Chapter 1 proof artifacts.",))
+        if any(term in text for term in self._assumptions) or (message.validation_question and not message.validation_question.strip().endswith("?")):
+            return OutreachEvaluation(OutreachEvaluationOutcome.REJECTED_ASSUMPTIONS, ("The message converts an internal hypothesis into an unsupported customer claim.",))
+        if any(term in text for term in self._solutions):
+            return OutreachEvaluation(OutreachEvaluationOutcome.SOLUTION_PREMATURE, ("The message proposes a solution before the hypothesis is validated.",))
+        if any(term in message.call_to_action.casefold() for term in self._aggressive_ctas):
+            return OutreachEvaluation(OutreachEvaluationOutcome.CTA_TOO_AGGRESSIVE, ("The call to action asks for commitment rather than a conversation.",))
+        stakeholder_supported = stakeholder.contact.id == message.stakeholder_id and bool(stakeholder.question_proximities)
+        if not message.factual_claims or not message.relevance.strip() or not stakeholder_supported:
+            return OutreachEvaluation(OutreachEvaluationOutcome.INSUFFICIENT_RELEVANCE, ("The message does not explain evidence-based organization, topic, and recipient relevance.",))
+        limit = max_words or (90 if message.channel is OutreachChannel.PROFESSIONAL_NETWORK else 150)
+        if len(message.body.split()) > limit:
+            return OutreachEvaluation(OutreachEvaluationOutcome.TOO_BROAD, ("The message contains more context and capability detail than this channel needs.",))
+        if message.objective is not OutreachObjective.VALIDATE_HYPOTHESIS:
+            return OutreachEvaluation(OutreachEvaluationOutcome.INSUFFICIENT_RELEVANCE, ("The message is not designed to validate the current hypothesis.",))
+        return OutreachEvaluation(OutreachEvaluationOutcome.SUPPORTED, (
+            "Public claims trace to evidence.", "Recipient relevance is supported.",
+            "The hypothesis remains a question.", "Credibility traces to Chapter 1 proof.",
+            "The call to action asks only for a conversation.",
+        ))
+
+    def ready_attempt(self, message: OutreachMessage, evaluation: OutreachEvaluation) -> OutreachAttempt:
+        status = OutreachStatus.READY if evaluation.outcome is OutreachEvaluationOutcome.SUPPORTED else OutreachStatus.DRAFT
+        return OutreachAttempt(message, status)
+
+
+class OutreachChannelAdapter:
+    """Render the same supported components at deterministic channel lengths."""
+
+    def render(self, message: OutreachMessage, channel: OutreachChannel) -> str:
+        if channel is OutreachChannel.PROFESSIONAL_NETWORK:
+            return " ".join((message.observation, message.relevance, message.validation_question, message.call_to_action))
+        if channel is OutreachChannel.EMAIL:
+            return " ".join((message.observation, message.relevance, message.credibility, message.validation_question, message.call_to_action))
+        return "\n".join((f"OBSERVATION: {message.observation}", f"QUESTION: {message.validation_question}", f"NEXT STEP: {message.call_to_action}"))
