@@ -33,6 +33,14 @@
       "program": "${workspaceFolder}/examples/debug_account_selection.py",
       "env": {"PYTHONPATH": "${workspaceFolder}/src"},
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 4 Account Research",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_account_research.py",
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
     }
   ]
 }

@@ -10,6 +10,9 @@ from engagement_dev.scenarios.chapter_two import (
 from engagement_dev.scenarios.chapter_three import (
     build_chapter_three_queue, chapter_three_report, load_chapter_three,
 )
+from engagement_dev.scenarios.chapter_four import (
+    chapter_four_report, evaluate_chapter_four, load_chapter_four,
+)
 from engagement_dev.services import create_hypothesis
 
 

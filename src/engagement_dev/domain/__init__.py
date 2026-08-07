@@ -1,6 +1,7 @@
 """Small, immutable domain objects with explicit evidence traceability."""
 
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 
 
@@ -15,6 +16,41 @@ class EvidenceCategory(StrEnum):
     INDUSTRY_PATTERN = "INDUSTRY_PATTERN"
     OBSERVED_TECHNOLOGY_PATTERN = "OBSERVED_TECHNOLOGY_PATTERN"
     PROVIDER_EXPERIENCE = "PROVIDER_EXPERIENCE"
+
+
+class PublicSourceType(StrEnum):
+    COMPANY_WEBSITE = "COMPANY_WEBSITE"
+    PUBLIC_JOB_POSTING = "PUBLIC_JOB_POSTING"
+    PRESS_RELEASE = "PRESS_RELEASE"
+    PUBLIC_VENDOR_PAGE = "PUBLIC_VENDOR_PAGE"
+    PUBLIC_SOCIAL_POST = "PUBLIC_SOCIAL_POST"
+    PUBLIC_NEWS_ARTICLE = "PUBLIC_NEWS_ARTICLE"
+    PUBLIC_DIRECTORY = "PUBLIC_DIRECTORY"
+
+
+class SourceReliability(StrEnum):
+    PRIMARY_PUBLIC_SOURCE = "PRIMARY_PUBLIC_SOURCE"
+    SECONDARY_PUBLIC_SOURCE = "SECONDARY_PUBLIC_SOURCE"
+    UNVERIFIED_PUBLIC_CLAIM = "UNVERIFIED_PUBLIC_CLAIM"
+
+
+class EvidenceFreshness(StrEnum):
+    CURRENT = "CURRENT"
+    AGING = "AGING"
+    STALE = "STALE"
+
+
+class ResearchDimension(StrEnum):
+    ORGANIZATION = "ORGANIZATION"
+    OPERATIONS = "OPERATIONS"
+    TECHNOLOGY = "TECHNOLOGY"
+    CHANGE = "CHANGE"
+    PEOPLE = "PEOPLE"
+
+
+class ResearchClaimType(StrEnum):
+    FACT = "FACT"
+    OBSERVATION = "OBSERVATION"
 
 
 DIRECT_EVIDENCE_CATEGORIES = frozenset(
@@ -101,6 +137,11 @@ class AccountEvidence:
     source: str
     relevant_problem_class_ids: tuple[str, ...] = ()
     is_negative: bool = False
+    source_type: PublicSourceType | None = None
+    source_reliability: SourceReliability | None = None
+    observed_on: date | None = None
+    dimension: ResearchDimension | None = None
+    claim_type: ResearchClaimType = ResearchClaimType.OBSERVATION
 
     @property
     def is_observed(self) -> bool:
@@ -115,6 +156,45 @@ class AccountInterpretation:
     account_id: str
     statement: str
     evidence_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ResearchUnknown:
+    id: str
+    account_id: str
+    question: str
+    dimension: ResearchDimension
+
+
+@dataclass(frozen=True)
+class EvidenceConflict:
+    id: str
+    account_id: str
+    evidence_ids: tuple[str, ...]
+    explanation: str
+    requires_review: bool = True
+
+
+@dataclass(frozen=True)
+class CorroboratedObservation:
+    statement: str
+    evidence_ids: tuple[str, ...]
+    explanation: str
+
+
+@dataclass(frozen=True)
+class AccountResearchBrief:
+    """Public account research only; deliberately contains no qualification fields."""
+
+    account: Account
+    market: Market
+    research_date: date
+    evidence: tuple[AccountEvidence, ...]
+    inferences: tuple[AccountInterpretation, ...]
+    unknowns: tuple[ResearchUnknown, ...]
+    conflicts: tuple[EvidenceConflict, ...]
+    corroborated_observations: tuple[CorroboratedObservation, ...]
+    relevant_problem_class_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
