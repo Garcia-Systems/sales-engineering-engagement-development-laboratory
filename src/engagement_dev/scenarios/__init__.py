@@ -15,6 +15,7 @@ from engagement_dev.scenarios.chapter_four import (
 )
 from engagement_dev.scenarios.chapter_five import analyze_chapter_five, chapter_five_report
 from engagement_dev.scenarios.chapter_six import analyze_chapter_six, chapter_six_report
+from engagement_dev.scenarios.chapter_seven import analyze_chapter_seven, chapter_seven_report
 from engagement_dev.services import create_hypothesis
 
 

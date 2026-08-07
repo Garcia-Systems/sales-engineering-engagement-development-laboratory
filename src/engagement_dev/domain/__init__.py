@@ -386,6 +386,144 @@ class Contact:
     role: str
 
 
+class KnowledgeDomain(StrEnum):
+    WORKFLOW = "WORKFLOW"
+    TECHNOLOGY = "TECHNOLOGY"
+    BUSINESS_IMPACT = "BUSINESS_IMPACT"
+    FINANCE = "FINANCE"
+    OPERATIONS = "OPERATIONS"
+    STRATEGY = "STRATEGY"
+    PROCUREMENT = "PROCUREMENT"
+    IMPLEMENTATION = "IMPLEMENTATION"
+    CUSTOMER_EXPERIENCE = "CUSTOMER_EXPERIENCE"
+    MARKETING = "MARKETING"
+
+
+class EvidenceProximity(StrEnum):
+    DIRECT = "DIRECT"
+    NEAR = "NEAR"
+    INDIRECT = "INDIRECT"
+    UNKNOWN = "UNKNOWN"
+
+
+class OrganizationalRole(StrEnum):
+    WORKFLOW_OWNER = "WORKFLOW_OWNER"
+    TECHNICAL_STAKEHOLDER = "TECHNICAL_STAKEHOLDER"
+    BUSINESS_STAKEHOLDER = "BUSINESS_STAKEHOLDER"
+    ECONOMIC_STAKEHOLDER = "ECONOMIC_STAKEHOLDER"
+    PROCUREMENT_STAKEHOLDER = "PROCUREMENT_STAKEHOLDER"
+    EXECUTIVE_SPONSOR = "EXECUTIVE_SPONSOR"
+    END_USER = "END_USER"
+    INFLUENCER = "INFLUENCER"
+    UNKNOWN = "UNKNOWN"
+
+
+class AuthorityStatus(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    UNKNOWN = "UNKNOWN"
+
+
+class StakeholderClaimType(StrEnum):
+    TITLE = "TITLE"
+    ORGANIZATIONAL_ROLE = "ORGANIZATIONAL_ROLE"
+    RESPONSIBILITY = "RESPONSIBILITY"
+    RELATIONSHIP = "RELATIONSHIP"
+
+
+@dataclass(frozen=True)
+class StakeholderEvidence:
+    id: str
+    account_id: str
+    claim_type: StakeholderClaimType
+    claim: str
+    source: str
+    source_type: PublicSourceType
+
+    def __post_init__(self) -> None:
+        if not self.claim.strip() or not self.source.strip():
+            raise ValueError("Stakeholder claims require public evidence provenance.")
+
+
+@dataclass(frozen=True)
+class QuestionProximity:
+    validation_question: str
+    domain: KnowledgeDomain
+    proximity: EvidenceProximity
+
+
+@dataclass(frozen=True)
+class Stakeholder:
+    """An evidence-backed view of a Contact, never an automatic buyer."""
+
+    contact: Contact
+    account_id: str
+    title: str
+    organizational_roles: tuple[OrganizationalRole, ...]
+    responsibilities: tuple[str, ...]
+    knowledge_domains: tuple[KnowledgeDomain, ...]
+    question_proximities: tuple[QuestionProximity, ...]
+    possible_relevance: str
+    evidence: tuple[StakeholderEvidence, ...]
+    purchasing_authority: AuthorityStatus = AuthorityStatus.UNKNOWN
+    budget_authority: AuthorityStatus = AuthorityStatus.UNKNOWN
+    procurement_authority: AuthorityStatus = AuthorityStatus.UNKNOWN
+    technical_authority: AuthorityStatus = AuthorityStatus.UNKNOWN
+
+    def __post_init__(self) -> None:
+        if self.contact.account_id != self.account_id:
+            raise ValueError("Stakeholder contact and account must match.")
+        claims = {(item.claim_type, item.claim) for item in self.evidence}
+        if (StakeholderClaimType.TITLE, self.title) not in claims:
+            raise ValueError("A stakeholder title requires supporting evidence.")
+        if any((StakeholderClaimType.RESPONSIBILITY, item) not in claims for item in self.responsibilities):
+            raise ValueError("Every stakeholder responsibility requires supporting evidence.")
+        if (
+            any(item is not OrganizationalRole.UNKNOWN for item in self.organizational_roles)
+            and not any(item.claim_type is StakeholderClaimType.ORGANIZATIONAL_ROLE for item in self.evidence)
+        ):
+            raise ValueError("A supported organizational role requires evidence.")
+        if any(item.account_id != self.account_id for item in self.evidence):
+            raise ValueError("Stakeholder evidence must belong to the account.")
+
+
+class RelationshipType(StrEnum):
+    REPORTS_TO = "REPORTS_TO"
+    WORKS_WITH = "WORKS_WITH"
+    SUPPORTS = "SUPPORTS"
+    OVERSEES = "OVERSEES"
+    UNKNOWN_RELATIONSHIP = "UNKNOWN_RELATIONSHIP"
+
+
+@dataclass(frozen=True)
+class StakeholderRelationship:
+    source_contact_id: str
+    target_contact_id: str
+    relationship_type: RelationshipType
+    evidence_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.relationship_type is not RelationshipType.UNKNOWN_RELATIONSHIP and not self.evidence_ids:
+            raise ValueError("A known organizational relationship requires evidence.")
+        if self.relationship_type is RelationshipType.UNKNOWN_RELATIONSHIP and self.evidence_ids:
+            raise ValueError("An unknown relationship cannot cite evidence as support.")
+
+
+@dataclass(frozen=True)
+class ValidationQuestionMapping:
+    question: str
+    required_domains: tuple[KnowledgeDomain, ...]
+    stakeholder_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class StakeholderMap:
+    account_id: str
+    hypothesis_id: str
+    stakeholders: tuple[Stakeholder, ...]
+    relationships: tuple[StakeholderRelationship, ...]
+    question_mappings: tuple[ValidationQuestionMapping, ...]
+
+
 @dataclass(frozen=True)
 class Conversation:
     id: str
