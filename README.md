@@ -33,6 +33,7 @@ engagement-dev chapter-6
 engagement-dev chapter-7
 engagement-dev chapter-8
 engagement-dev chapter-9
+engagement-dev chapter-10
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -60,7 +61,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 9 — Running the First Conversation](chapters/chapter_09_running_the_first_conversation.md) implements **Opportunity Hypothesis → Neutral Validation Questions → Simulated Stakeholder Conversation → Stakeholder Evidence → Hypothesis Update**. It preserves statement provenance, supports refinement and refutation, selects no solution, and creates no qualification.
 
-Chapters 0–9 are implemented. Chapter 10 — **Qualifying the Opportunity** is recommended next and is not yet implemented.
+[Chapter 10 — Qualifying the Opportunity](chapters/chapter_10_qualifying_the_opportunity.md) implements **Customer-Grounded Evidence → Explicit Qualification Dimensions → Deterministic Threshold → Engagement Candidate → Evidence-Backed Handoff**. It is the first chapter permitted to create an `EngagementCandidate`, and does so only when the conservative threshold passes. Budget may remain explicitly unknown; no solution, architecture, deal value, or close probability is assumed.
+
+Chapters 0–10 are implemented. Chapter 10 completes the first major lifecycle: **Market → Account → Signal → Hypothesis → Contact → Conversation → Qualification → Engagement**. Chapter 11 is not implemented.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -68,4 +71,6 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through [Chapter 8](chapters/chapter_08_designing_evidence_based_outreach.md), then run the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), then cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md).
+
+The recommended next chapter is **Chapter 11 — Managing Follow-Up Without Chasing**: evidence-based, respectful handling of no response, “not now,” requested later follow-up, and conversations that go quiet, with explicit stopping rules.

@@ -589,6 +589,7 @@ class StakeholderStatement:
     evidence_category: EvidenceCategory
     relationship: StatementRelationship
     source_conversation_id: str
+    id: str = ""
 
     def __post_init__(self) -> None:
         if self.evidence_category is not EvidenceCategory.STAKEHOLDER_STATEMENT:
@@ -655,6 +656,17 @@ class QualificationAssessment:
     condition_met: bool
     rationale: str
     evidence_ids: tuple[str, ...]
+    opportunity_hypothesis: OpportunityHypothesis | None = None
+    refined_hypothesis: OpportunityHypothesis | None = None
+    dimensions: tuple["QualificationDimension", ...] = ()
+    unresolved_gaps: tuple[str, ...] = ()
+    contradictions: tuple[str, ...] = ()
+    outcome: "QualificationOutcome | None" = None
+    explanation: str = ""
+    recommended_next_action: str = ""
+
+    def dimension(self, name: "QualificationDimensionName") -> "QualificationDimension":
+        return next(item for item in self.dimensions if item.name is name)
 
 
 @dataclass(frozen=True)
@@ -663,6 +675,132 @@ class EngagementCandidate:
     account_id: str
     hypothesis_id: str
     qualification_id: str
+    account: Account | None = None
+    validated_problem_hypothesis: OpportunityHypothesis | None = None
+    qualification_assessment: QualificationAssessment | None = None
+    stakeholder_evidence: tuple[StakeholderStatement, ...] = ()
+    known_stakeholders: tuple[Stakeholder, ...] = ()
+    business_impact_evidence: tuple[str, ...] = ()
+    current_approach: str = ""
+    known_constraints: tuple[str, ...] = ()
+    timing: str = ""
+    unresolved_questions: tuple[str, ...] = ()
+    engagement_objective: str = ""
+    handoff_status: str = "NOT_READY"
+
+
+class QualificationDimensionName(StrEnum):
+    PROBLEM = "PROBLEM"
+    IMPACT = "IMPACT"
+    PRIORITY = "PRIORITY"
+    OWNERSHIP = "OWNERSHIP"
+    TIMING = "TIMING"
+    CURRENT_APPROACH = "CURRENT_APPROACH"
+    CONSTRAINTS = "CONSTRAINTS"
+    DECISION_PROCESS = "DECISION_PROCESS"
+    PROVIDER_FIT = "PROVIDER_FIT"
+    EXTERNAL_HELP = "EXTERNAL_HELP"
+    AGREED_INVESTIGATION = "AGREED_INVESTIGATION"
+    BUDGET = "BUDGET"
+
+
+class ProblemState(StrEnum):
+    CONFIRMED = "CONFIRMED"
+    PARTIAL = "PARTIAL"
+    UNKNOWN = "UNKNOWN"
+    REFUTED = "REFUTED"
+
+
+class ImpactState(StrEnum):
+    CONFIRMED = "CONFIRMED"
+    PARTIAL = "PARTIAL"
+    UNKNOWN = "UNKNOWN"
+    NO_ACTIONABLE_IMPACT = "NO_ACTIONABLE_IMPACT"
+
+
+class PriorityState(StrEnum):
+    ACTIVE = "ACTIVE"
+    EMERGING = "EMERGING"
+    LOW = "LOW"
+    UNKNOWN = "UNKNOWN"
+    NOT_A_PRIORITY = "NOT_A_PRIORITY"
+
+
+class OwnershipState(StrEnum):
+    IDENTIFIED = "IDENTIFIED"
+    PARTIAL = "PARTIAL"
+    UNKNOWN = "UNKNOWN"
+
+
+class TimingState(StrEnum):
+    ACTIVE = "ACTIVE"
+    UPCOMING = "UPCOMING"
+    UNDEFINED = "UNDEFINED"
+    DEFERRED = "DEFERRED"
+
+
+class KnowledgeState(StrEnum):
+    KNOWN = "KNOWN"
+    PARTIAL = "PARTIAL"
+    UNKNOWN = "UNKNOWN"
+
+
+class ProviderFitState(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    UNKNOWN = "UNKNOWN"
+    NOT_A_FIT = "NOT_A_FIT"
+
+
+class ExternalHelpState(StrEnum):
+    OPEN = "OPEN"
+    POSSIBLY_OPEN = "POSSIBLY_OPEN"
+    UNKNOWN = "UNKNOWN"
+    INTERNAL_ONLY = "INTERNAL_ONLY"
+    NOT_INTERESTED = "NOT_INTERESTED"
+
+
+class QualificationOutcome(StrEnum):
+    QUALIFIED_FOR_ENGAGEMENT = "QUALIFIED_FOR_ENGAGEMENT"
+    MORE_DISCOVERY_NEEDED = "MORE_DISCOVERY_NEEDED"
+    NOT_CURRENT_PRIORITY = "NOT_CURRENT_PRIORITY"
+    NO_ACTIONABLE_IMPACT = "NO_ACTIONABLE_IMPACT"
+    NO_CLEAR_OWNER = "NO_CLEAR_OWNER"
+    TIMING_NOT_ACTIVE = "TIMING_NOT_ACTIVE"
+    EXTERNAL_HELP_NOT_ACCEPTED = "EXTERNAL_HELP_NOT_ACCEPTED"
+    NOT_A_FIT = "NOT_A_FIT"
+    NO_CURRENT_OPPORTUNITY = "NO_CURRENT_OPPORTUNITY"
+
+
+@dataclass(frozen=True)
+class QualificationDimension:
+    """One explicit conclusion and the evidence that permits it."""
+
+    name: QualificationDimensionName
+    state: StrEnum
+    evidence_ids: tuple[str, ...] = ()
+    explanation: str = ""
+    unknowns: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        unknown_states = {"UNKNOWN", "UNDEFINED"}
+        if self.state.value not in unknown_states and not self.evidence_ids:
+            raise ValueError(f"{self.name.value} {self.state.value} requires evidence.")
+
+
+@dataclass(frozen=True)
+class EngagementHandoff:
+    account: Account
+    problem: str
+    evidence: tuple[StakeholderStatement, ...]
+    business_impact: str
+    priority: str
+    owner: Stakeholder
+    timing: str
+    current_approach: str
+    known_constraints: tuple[str, ...]
+    external_help: str
+    unknowns: tuple[str, ...]
+    engagement_objective: str
 
 
 class UnsupportedHypothesisError(ValueError):

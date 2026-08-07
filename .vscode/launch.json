@@ -103,6 +103,16 @@
         "PYTHONPATH": "${workspaceFolder}/src"
       },
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 10 Qualification",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_qualification.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
     }
   ]
 }

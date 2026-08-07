@@ -18,6 +18,7 @@ from engagement_dev.scenarios.chapter_six import analyze_chapter_six, chapter_si
 from engagement_dev.scenarios.chapter_seven import analyze_chapter_seven, chapter_seven_report
 from engagement_dev.scenarios.chapter_eight import analyze_chapter_eight, chapter_eight_report
 from engagement_dev.scenarios.chapter_nine import analyze_chapter_nine, chapter_nine_report
+from engagement_dev.scenarios.chapter_ten import analyze_chapter_ten, chapter_ten_report
 from engagement_dev.services import create_hypothesis
 
 

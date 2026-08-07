@@ -48,6 +48,9 @@ from engagement_dev.domain import (
     Conversation, ConversationEvidence, ConversationObjective, ConversationQuestion, ConversationStage,
     ConversationStatus, HypothesisOutcome, QuestionType, StatementRelationship,
     StakeholderStatement,
+    ExternalHelpState, ImpactState, KnowledgeState, OwnershipState, PriorityState,
+    ProblemState, ProviderFitState, QualificationDimension, QualificationDimensionName,
+    QualificationOutcome, TimingState,
 )
 
 from datetime import date
@@ -79,6 +82,7 @@ def create_engagement_candidate(
     """Cross the laboratory boundary only after an explicit positive assessment."""
     if (
         not qualification.condition_met
+        or (qualification.outcome is not None and qualification.outcome is not QualificationOutcome.QUALIFIED_FOR_ENGAGEMENT)
         or qualification.hypothesis_id != hypothesis.id
         or hypothesis.account_id != account.id
         or not qualification.evidence_ids
@@ -89,7 +93,69 @@ def create_engagement_candidate(
         account_id=account.id,
         hypothesis_id=hypothesis.id,
         qualification_id=qualification.id,
+        account=account,
+        validated_problem_hypothesis=hypothesis,
+        qualification_assessment=qualification,
     )
+
+
+class QualificationEvaluator:
+    """A conservative ordered threshold: evidence, never a score, crosses the boundary."""
+
+    required_names = frozenset(QualificationDimensionName)
+
+    def evaluate(
+        self, *, assessment_id: str, opportunity_hypothesis: OpportunityHypothesis,
+        refined_hypothesis: OpportunityHypothesis, dimensions: tuple[QualificationDimension, ...],
+        unresolved_gaps: tuple[str, ...] = (), contradictions: tuple[str, ...] = (),
+    ) -> QualificationAssessment:
+        by_name = {item.name: item for item in dimensions}
+        missing = self.required_names - by_name.keys()
+        if missing:
+            raise ValueError("Qualification must explicitly represent every dimension: " + ", ".join(sorted(item.value for item in missing)))
+
+        def state(name: QualificationDimensionName):
+            return by_name[name].state
+
+        if state(QualificationDimensionName.PROBLEM) is ProblemState.REFUTED:
+            outcome = QualificationOutcome.NO_CURRENT_OPPORTUNITY
+        elif state(QualificationDimensionName.PRIORITY) in {PriorityState.LOW, PriorityState.NOT_A_PRIORITY}:
+            outcome = QualificationOutcome.NOT_CURRENT_PRIORITY
+        elif state(QualificationDimensionName.EXTERNAL_HELP) in {ExternalHelpState.INTERNAL_ONLY, ExternalHelpState.NOT_INTERESTED}:
+            outcome = QualificationOutcome.EXTERNAL_HELP_NOT_ACCEPTED
+        elif state(QualificationDimensionName.IMPACT) is ImpactState.NO_ACTIONABLE_IMPACT:
+            outcome = QualificationOutcome.NO_ACTIONABLE_IMPACT
+        elif state(QualificationDimensionName.OWNERSHIP) is OwnershipState.UNKNOWN:
+            outcome = QualificationOutcome.NO_CLEAR_OWNER
+        elif state(QualificationDimensionName.TIMING) is TimingState.DEFERRED:
+            outcome = QualificationOutcome.TIMING_NOT_ACTIVE
+        elif state(QualificationDimensionName.PROVIDER_FIT) is not ProviderFitState.SUPPORTED:
+            outcome = QualificationOutcome.NOT_A_FIT if state(QualificationDimensionName.PROVIDER_FIT) is ProviderFitState.NOT_A_FIT else QualificationOutcome.MORE_DISCOVERY_NEEDED
+        else:
+            passes = (
+                state(QualificationDimensionName.PROBLEM) is ProblemState.CONFIRMED
+                and state(QualificationDimensionName.IMPACT) is ImpactState.CONFIRMED
+                and state(QualificationDimensionName.PRIORITY) in {PriorityState.ACTIVE, PriorityState.EMERGING}
+                and state(QualificationDimensionName.OWNERSHIP) is OwnershipState.IDENTIFIED
+                and state(QualificationDimensionName.TIMING) in {TimingState.ACTIVE, TimingState.UPCOMING}
+                and state(QualificationDimensionName.PROVIDER_FIT) is ProviderFitState.SUPPORTED
+                and state(QualificationDimensionName.EXTERNAL_HELP) in {ExternalHelpState.OPEN, ExternalHelpState.POSSIBLY_OPEN}
+                and state(QualificationDimensionName.AGREED_INVESTIGATION) is KnowledgeState.KNOWN
+            )
+            outcome = QualificationOutcome.QUALIFIED_FOR_ENGAGEMENT if passes else QualificationOutcome.MORE_DISCOVERY_NEEDED
+
+        evidence_ids = tuple(dict.fromkeys(identifier for item in dimensions for identifier in item.evidence_ids))
+        qualified = outcome is QualificationOutcome.QUALIFIED_FOR_ENGAGEMENT
+        explanation = (
+            "There is customer-grounded evidence of a specific problem, meaningful operational impact, active priority, ownership, relevant timing, provider fit, and willingness to consider deeper investigation."
+            if qualified else f"The evidence produces {outcome.value}; the engagement threshold is not satisfied."
+        )
+        return QualificationAssessment(
+            assessment_id, refined_hypothesis.id, qualified, explanation, evidence_ids,
+            opportunity_hypothesis, refined_hypothesis, dimensions, unresolved_gaps,
+            contradictions, outcome, explanation,
+            "Begin a structured Sales Engineering engagement." if qualified else "Resolve evidence gaps or defer without assuming an opportunity.",
+        )
 
 
 class OfferEvaluationStatus(StrEnum):
