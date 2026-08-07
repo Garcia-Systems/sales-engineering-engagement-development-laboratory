@@ -35,6 +35,14 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Chapter 5 Signal Evaluation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_signal_evaluation.py",
+      "env": {"PYTHONPATH": "${workspaceFolder}/src"},
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chapter 4 Account Research",
       "type": "debugpy",
       "request": "launch",
