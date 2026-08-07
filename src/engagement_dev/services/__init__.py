@@ -53,7 +53,151 @@ from engagement_dev.domain import (
     QualificationOutcome, TimingState,
 )
 
-from datetime import date
+from datetime import date, timedelta
+
+from engagement_dev.domain import (
+    FollowUpAction, FollowUpReason, FollowUpResponseOutcome, FollowUpStatus, StopReason,
+    StoppingRuleState,
+)
+
+
+class FollowUpEvaluationOutcome(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    TOO_SOON = "TOO_SOON"
+    NO_VALID_REASON = "NO_VALID_REASON"
+    TOO_MANY_ATTEMPTS = "TOO_MANY_ATTEMPTS"
+    CONTRADICTS_STAKEHOLDER_REQUEST = "CONTRADICTS_STAKEHOLDER_REQUEST"
+    PRESSURE_LANGUAGE = "PRESSURE_LANGUAGE"
+    CLOSE_SEQUENCE = "CLOSE_SEQUENCE"
+    DEFER_UNTIL_REQUESTED_TIME = "DEFER_UNTIL_REQUESTED_TIME"
+
+
+@dataclass(frozen=True)
+class FollowUpEvaluation:
+    outcome: FollowUpEvaluationOutcome
+    explanation: str
+
+
+@dataclass(frozen=True)
+class FollowUpPolicy:
+    """Conservative educational defaults, not a universally optimal cadence."""
+
+    initial_follow_up_interval_days: int = 7
+    close_loop_interval_days: int = 4
+    max_follow_up_attempts: int = 2
+    requested_no_contact_ids: tuple[str, ...] = ()
+
+
+class FollowUpEvaluator:
+    """Ordered, explainable rules for respectful simulated follow-up."""
+
+    _pressure_terms = (
+        "i've emailed several times", "i’ve emailed several times", "haven't heard back",
+        "haven’t heard back", "can you please respond", "i know you're busy",
+        "i know you’re busy", "just checking whether you saw", "just bumping",
+        "checking in",
+    )
+
+    def __init__(self, policy: FollowUpPolicy | None = None) -> None:
+        self.policy = policy or FollowUpPolicy()
+
+    def evaluate(
+        self, action: FollowUpAction, *, today: date, prior_interaction_date: date,
+    ) -> FollowUpEvaluation:
+        if action.stakeholder.contact.id in self.policy.requested_no_contact_ids:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.CONTRADICTS_STAKEHOLDER_REQUEST,
+                "This contact requested no future outreach; the prohibition applies to every sequence.",
+            )
+        if action.stopping_rule.stopped:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.CONTRADICTS_STAKEHOLDER_REQUEST,
+                f"The sequence is stopped: {action.stopping_rule.reason.value}.",
+            )
+        if action.reason is None:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.NO_VALID_REASON,
+                "Wanting a response is not a legitimate reason to reconnect.",
+            )
+        folded = action.proposed_message.casefold()
+        if any(term in folded for term in self._pressure_terms):
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.PRESSURE_LANGUAGE,
+                "The message uses pressure or makes the recipient responsible for prior silence.",
+            )
+        if action.attempt_count >= self.policy.max_follow_up_attempts:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.TOO_MANY_ATTEMPTS,
+                "The deterministic attempt limit has been reached; do not continue the sequence.",
+            )
+        if action.reason is FollowUpReason.REQUESTED_FOLLOW_UP:
+            if action.requested_date is not None and today < action.requested_date:
+                return FollowUpEvaluation(
+                    FollowUpEvaluationOutcome.DEFER_UNTIL_REQUESTED_TIME,
+                    f"Respect the stakeholder's requested date: {action.requested_date.isoformat()}.",
+                )
+            if action.requested_event and not action.requested_event_observed:
+                return FollowUpEvaluation(
+                    FollowUpEvaluationOutcome.DEFER_UNTIL_REQUESTED_TIME,
+                    "The stakeholder's requested event has not been observed.",
+                )
+        if today < action.intended_timing:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.TOO_SOON,
+                f"Wait until the deterministic scenario date: {action.intended_timing.isoformat()}.",
+            )
+        if (
+            action.reason is FollowUpReason.NO_RESPONSE_TO_INITIAL_OUTREACH
+            and today < prior_interaction_date + timedelta(days=self.policy.initial_follow_up_interval_days)
+        ):
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.TOO_SOON,
+                "The educational no-response interval has not elapsed.",
+            )
+        if action.attempt_count == self.policy.max_follow_up_attempts - 1:
+            return FollowUpEvaluation(
+                FollowUpEvaluationOutcome.CLOSE_SEQUENCE,
+                "The only supported action is an optional respectful close-the-loop message.",
+            )
+        return FollowUpEvaluation(
+            FollowUpEvaluationOutcome.SUPPORTED,
+            "A concise follow-up has a traceable reason and complies with timing and stopping rules.",
+        )
+
+    def close(self, action: FollowUpAction) -> FollowUpAction:
+        """Record the final simulated message and irreversibly close this sequence."""
+        return replace(
+            action, status=FollowUpStatus.CLOSED,
+            stopping_rule=StoppingRuleState(True, StopReason.MAX_ATTEMPTS_REACHED),
+        )
+
+    def stop(self, action: FollowUpAction, reason: StopReason) -> FollowUpAction:
+        return replace(
+            action, status=FollowUpStatus.CLOSED,
+            stopping_rule=StoppingRuleState(True, reason),
+        )
+
+
+class FollowUpResponseInterpreter:
+    """Classify only explicit response evidence; an absent response stays neutral."""
+
+    def interpret(self, statement: str | None) -> FollowUpResponseOutcome:
+        if statement is None or not statement.strip():
+            return FollowUpResponseOutcome.NO_RESPONSE_OBSERVED
+        text = statement.casefold()
+        if "remove me" in text or "do not contact" in text:
+            return FollowUpResponseOutcome.REQUESTED_NO_CONTACT
+        if "talk to" in text or "better discussed with" in text:
+            return FollowUpResponseOutcome.STAKEHOLDER_REFERRAL
+        if "reach back out" in text or "contact us after" in text or "next week" in text:
+            return FollowUpResponseOutcome.REQUESTED_FOLLOW_UP
+        if "handling this internally" in text or "handle this internally" in text or "not interested" in text:
+            return FollowUpResponseOutcome.EXTERNAL_HELP_NOT_ACCEPTED
+        if "not a priority" in text:
+            return FollowUpResponseOutcome.NOT_CURRENT_PRIORITY
+        if "don't have bandwidth" in text or "don’t have bandwidth" in text:
+            return FollowUpResponseOutcome.DEFERRED
+        return FollowUpResponseOutcome.UNCLASSIFIED_EVIDENCE
 
 
 def create_hypothesis(

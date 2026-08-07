@@ -921,3 +921,102 @@ class OutreachAttempt:
     def __post_init__(self) -> None:
         if self.actual_message_sent:
             raise ValueError("This educational laboratory cannot send external communication.")
+
+
+class FollowUpReason(StrEnum):
+    NO_RESPONSE_TO_INITIAL_OUTREACH = "NO_RESPONSE_TO_INITIAL_OUTREACH"
+    REQUESTED_FOLLOW_UP = "REQUESTED_FOLLOW_UP"
+    TIMING_CHANGE = "TIMING_CHANGE"
+    NEW_RELEVANT_EVIDENCE = "NEW_RELEVANT_EVIDENCE"
+    OPEN_QUESTION = "OPEN_QUESTION"
+    POST_CONVERSATION_NEXT_STEP = "POST_CONVERSATION_NEXT_STEP"
+    QUALIFICATION_GAP = "QUALIFICATION_GAP"
+    STAKEHOLDER_REFERRAL = "STAKEHOLDER_REFERRAL"
+
+
+class FollowUpStatus(StrEnum):
+    PLANNED = "PLANNED"
+    READY = "READY"
+    SENT_SIMULATED = "SENT_SIMULATED"
+    REPLIED = "REPLIED"
+    NO_RESPONSE = "NO_RESPONSE"
+    DEFERRED = "DEFERRED"
+    CLOSED = "CLOSED"
+
+
+class StopReason(StrEnum):
+    MAX_ATTEMPTS_REACHED = "MAX_ATTEMPTS_REACHED"
+    EXPLICIT_DECLINE = "EXPLICIT_DECLINE"
+    NO_LONGER_RELEVANT = "NO_LONGER_RELEVANT"
+    HYPOTHESIS_REFUTED = "HYPOTHESIS_REFUTED"
+    REQUESTED_NO_CONTACT = "REQUESTED_NO_CONTACT"
+    TIMING_TOO_DISTANT = "TIMING_TOO_DISTANT"
+    ACCOUNT_OUT_OF_SCOPE = "ACCOUNT_OUT_OF_SCOPE"
+
+
+class FollowUpResponseOutcome(StrEnum):
+    NO_RESPONSE_OBSERVED = "NO_RESPONSE_OBSERVED"
+    REQUESTED_FOLLOW_UP = "REQUESTED_FOLLOW_UP"
+    DEFERRED = "DEFERRED"
+    NOT_CURRENT_PRIORITY = "NOT_CURRENT_PRIORITY"
+    EXTERNAL_HELP_NOT_ACCEPTED = "EXTERNAL_HELP_NOT_ACCEPTED"
+    REQUESTED_NO_CONTACT = "REQUESTED_NO_CONTACT"
+    STAKEHOLDER_REFERRAL = "STAKEHOLDER_REFERRAL"
+    UNCLASSIFIED_EVIDENCE = "UNCLASSIFIED_EVIDENCE"
+
+
+@dataclass(frozen=True)
+class StoppingRuleState:
+    stopped: bool = False
+    reason: StopReason | None = None
+
+    def __post_init__(self) -> None:
+        if self.stopped != (self.reason is not None):
+            raise ValueError("A stopped state requires a reason and an active state cannot have one.")
+
+
+@dataclass(frozen=True)
+class FollowUpAction:
+    """A simulated continuation with traceable context and no delivery capability."""
+
+    id: str
+    account: Account
+    stakeholder: Stakeholder
+    prior_interaction: OutreachAttempt | Conversation
+    reason: FollowUpReason | None
+    evidence_context: tuple[str, ...]
+    proposed_message: str
+    intended_timing: date
+    status: FollowUpStatus = FollowUpStatus.PLANNED
+    stopping_rule: StoppingRuleState = StoppingRuleState()
+    attempt_count: int = 0
+    requested_date: date | None = None
+    requested_event: str = ""
+    requested_event_observed: bool = False
+    actual_message_sent: bool = False
+
+    def __post_init__(self) -> None:
+        if self.account.id != self.stakeholder.account_id:
+            raise ValueError("Follow-up account and stakeholder must match.")
+        if self.attempt_count < 0:
+            raise ValueError("Follow-up attempt count cannot be negative.")
+        if self.actual_message_sent:
+            raise ValueError("This educational laboratory cannot send external communication.")
+        if self.status is FollowUpStatus.CLOSED and not self.stopping_rule.stopped:
+            raise ValueError("A closed follow-up requires a stopping rule state.")
+
+
+@dataclass(frozen=True)
+class StakeholderReferral:
+    source_stakeholder_id: str
+    referred_contact: Contact
+    source_statement: StakeholderStatement
+    interest_confirmed: bool = False
+
+    def __post_init__(self) -> None:
+        if self.source_statement.stakeholder_id != self.source_stakeholder_id:
+            raise ValueError("Referral provenance must identify the referring stakeholder.")
+        if self.referred_contact.account_id == "":
+            raise ValueError("A referred contact must belong to an account.")
+        if self.interest_confirmed:
+            raise ValueError("A referral cannot establish the referred contact's interest.")

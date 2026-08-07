@@ -6,6 +6,7 @@ This deterministic executable textbook teaches the upstream work **before** a fo
 flowchart TD
   Market --> Account --> Signals[Observed Signals] --> Hypothesis[Opportunity Hypothesis]
   Hypothesis --> StakeholderMap[Stakeholder Map] --> ContactStrategy[Contact Strategy] --> Conversation --> Qualification --> Engagement
+  ContactStrategy --> FollowUp[Respectful Follow-Up] --> ContactStrategy
 ```
 
 The reasoning chain is **Market → Account → Signal → Opportunity Hypothesis → Stakeholder Map → Contact Strategy → Conversation → Qualification → Engagement**. Every transition needs appropriate evidence. In particular:
@@ -34,6 +35,7 @@ engagement-dev chapter-7
 engagement-dev chapter-8
 engagement-dev chapter-9
 engagement-dev chapter-10
+engagement-dev chapter-11
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -63,7 +65,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 10 — Qualifying the Opportunity](chapters/chapter_10_qualifying_the_opportunity.md) implements **Customer-Grounded Evidence → Explicit Qualification Dimensions → Deterministic Threshold → Engagement Candidate → Evidence-Backed Handoff**. It is the first chapter permitted to create an `EngagementCandidate`, and does so only when the conservative threshold passes. Budget may remain explicitly unknown; no solution, architecture, deal value, or close probability is assumed.
 
-Chapters 0–10 are implemented. Chapter 10 completes the first major lifecycle: **Market → Account → Signal → Hypothesis → Contact → Conversation → Qualification → Engagement**. Chapter 11 is not implemented.
+[Chapter 11 — Managing Follow-Up Without Chasing](chapters/chapter_11_managing_follow_up_without_chasing.md) implements **Prior Interaction + Legitimate Reason + Contextual Timing + Stopping Rule → Simulated Follow-Up or Respectful Stop**. It keeps no response neutral, respects requested timing and strict no-contact states, limits no-response sequences, and never changes qualification or creates an engagement candidate merely because follow-up occurred.
+
+Chapters 0–11 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven branches for silence, “not now,” requested follow-up, declines, and referrals without confusing activity with progress. Chapter 12 is not implemented.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -71,6 +75,6 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), then cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md), and practice respectful continuation and stopping in [Chapter 11](chapters/chapter_11_managing_follow_up_without_chasing.md).
 
-The recommended next chapter is **Chapter 11 — Managing Follow-Up Without Chasing**: evidence-based, respectful handling of no response, “not now,” requested later follow-up, and conversations that go quiet, with explicit stopping rules.
+The recommended next chapter is **Chapter 12 — Building and Managing the Engagement Pipeline**: managing multiple accounts across evidence states, with evidence-based progress and capacity controls that prevent one silent account from consuming all available attention.

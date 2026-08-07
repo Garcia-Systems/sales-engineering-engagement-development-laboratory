@@ -105,6 +105,16 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Chapter 11 Follow-Up Policy",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_follow_up_policy.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chapter 10 Qualification",
       "type": "debugpy",
       "request": "launch",
