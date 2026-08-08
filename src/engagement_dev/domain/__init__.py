@@ -1036,6 +1036,7 @@ class PipelineState(StrEnum):
     QUALIFIED_FOR_ENGAGEMENT = "QUALIFIED_FOR_ENGAGEMENT"
     CLOSED_NO_OPPORTUNITY = "CLOSED_NO_OPPORTUNITY"
     OUT_OF_SCOPE = "OUT_OF_SCOPE"
+    QUALIFIED_ENGAGEMENT_CLOSED = "QUALIFIED_ENGAGEMENT_CLOSED"
 
 
 class PipelineDisposition(StrEnum):
@@ -1043,6 +1044,7 @@ class PipelineDisposition(StrEnum):
     DEFERRED = "DEFERRED"
     CLOSED_NO_OPPORTUNITY = "CLOSED_NO_OPPORTUNITY"
     OUT_OF_SCOPE = "OUT_OF_SCOPE"
+    QUALIFIED_ENGAGEMENT_CLOSED = "QUALIFIED_ENGAGEMENT_CLOSED"
 
 
 class ActivityType(StrEnum):
@@ -1132,3 +1134,121 @@ class PipelineWipLimits:
     deep_research: int = 3
     unresolved_outreach: int = 4
     formal_handoffs: int = 1
+
+
+# Chapter 13 appends an evidence-backed explanation to the Chapter 12 history.
+class ClosureReason(StrEnum):
+    HYPOTHESIS_REFUTED = "HYPOTHESIS_REFUTED"
+    NO_CURRENT_PRIORITY = "NO_CURRENT_PRIORITY"
+    NO_ACTIONABLE_IMPACT = "NO_ACTIONABLE_IMPACT"
+    INTERNAL_ONLY = "INTERNAL_ONLY"
+    EXTERNAL_HELP_NOT_ACCEPTED = "EXTERNAL_HELP_NOT_ACCEPTED"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
+    STAKEHOLDER_DECLINED = "STAKEHOLDER_DECLINED"
+    NO_RESPONSE_AFTER_STOPPING_RULE = "NO_RESPONSE_AFTER_STOPPING_RULE"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    TIMING_INACTIVE = "TIMING_INACTIVE"
+    PROJECT_CANCELLED = "PROJECT_CANCELLED"
+    EXISTING_APPROACH_ADEQUATE = "EXISTING_APPROACH_ADEQUATE"
+    PROVIDER_NOT_FIT = "PROVIDER_NOT_FIT"
+    NO_BUDGET = "NO_BUDGET"
+    NOT_INTERESTED = "NOT_INTERESTED"
+    UNKNOWN = "UNKNOWN"
+
+
+class ReasonKnowledge(StrEnum):
+    KNOWN_CLOSURE_REASON = "KNOWN_CLOSURE_REASON"
+    INFERRED_POSSIBILITY = "INFERRED_POSSIBILITY"
+    UNKNOWN = "UNKNOWN"
+
+
+class ClosureLevel(StrEnum):
+    RESEARCH_CLOSURE = "RESEARCH_CLOSURE"
+    OPPORTUNITY_CLOSURE = "OPPORTUNITY_CLOSURE"
+    QUALIFIED_ENGAGEMENT_CLOSURE = "QUALIFIED_ENGAGEMENT_CLOSURE"
+
+
+class ReopenTrigger(StrEnum):
+    NEW_RELEVANT_SIGNAL = "NEW_RELEVANT_SIGNAL"
+    STAKEHOLDER_REQUEST = "STAKEHOLDER_REQUEST"
+    TIMING_TRIGGER = "TIMING_TRIGGER"
+    NEW_INITIATIVE = "NEW_INITIATIVE"
+    NEW_PROBLEM_EVIDENCE = "NEW_PROBLEM_EVIDENCE"
+
+
+class LearningCategory(StrEnum):
+    MARKET_LEARNING = "MARKET_LEARNING"
+    ACCOUNT_LEARNING = "ACCOUNT_LEARNING"
+    SIGNAL_LEARNING = "SIGNAL_LEARNING"
+    HYPOTHESIS_LEARNING = "HYPOTHESIS_LEARNING"
+    STAKEHOLDER_LEARNING = "STAKEHOLDER_LEARNING"
+    OUTREACH_LEARNING = "OUTREACH_LEARNING"
+    QUALIFICATION_LEARNING = "QUALIFICATION_LEARNING"
+    PROCESS_LEARNING = "PROCESS_LEARNING"
+
+
+class LearningScope(StrEnum):
+    ACCOUNT_SPECIFIC = "ACCOUNT_SPECIFIC"
+    SCENARIO_PATTERN = "SCENARIO_PATTERN"
+    GENERALIZABLE_ONLY_WITH_MORE_EVIDENCE = "GENERALIZABLE_ONLY_WITH_MORE_EVIDENCE"
+
+
+@dataclass(frozen=True)
+class ClosureEvidence:
+    statement: str
+    knowledge: ReasonKnowledge
+    source: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.statement.strip():
+            raise ValueError("Closure evidence cannot be empty.")
+        if self.knowledge is ReasonKnowledge.KNOWN_CLOSURE_REASON and not self.source.strip():
+            raise ValueError("Known closure evidence requires provenance.")
+
+
+@dataclass(frozen=True)
+class ReopenCondition:
+    trigger: ReopenTrigger
+    description: str
+
+    def __post_init__(self) -> None:
+        if not self.description.strip():
+            raise ValueError("A reopen condition requires an explicit evidence trigger.")
+
+
+@dataclass(frozen=True)
+class ClosureLearning:
+    category: LearningCategory
+    statement: str
+    scope: LearningScope
+    evidence_statements: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.evidence_statements:
+            raise ValueError("A supported lesson must cite closure evidence.")
+
+
+@dataclass(frozen=True)
+class ClosureRecord:
+    account: Account
+    pipeline_item: PipelineItem
+    previous_state: PipelineState
+    closure_state: PipelineState
+    observed_reason: ClosureReason
+    supporting_evidence: tuple[ClosureEvidence, ...]
+    known_stakeholder_statements: tuple[str, ...]
+    unresolved_unknowns: tuple[str, ...]
+    supported_lessons: tuple[ClosureLearning, ...]
+    unsupported_lessons: tuple[str, ...]
+    reopen_condition: ReopenCondition | None
+    closure_date: date
+    state_history: tuple[PipelineStateEvent, ...]
+    level: ClosureLevel
+
+    def __post_init__(self) -> None:
+        if self.pipeline_item.account != self.account:
+            raise ValueError("Closure account must match its pipeline item.")
+        if self.state_history[:len(self.pipeline_item.state_history)] != self.pipeline_item.state_history:
+            raise ValueError("Closure must preserve the complete prior state history.")
+        if not self.state_history or self.state_history[-1].state is not self.closure_state:
+            raise ValueError("Closure history must append the closure state.")
