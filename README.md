@@ -39,6 +39,9 @@ engagement-dev chapter-11
 engagement-dev chapter-12
 engagement-dev chapter-13
 engagement-dev chapter-14
+engagement-dev chapter-15 --scenario productive
+engagement-dev chapter-15 --scenario zero-engagement
+engagement-dev chapter-15 --scenario capacity-constrained
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -76,14 +79,35 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 14 — Engagement Development Analytics and Continuous Improvement](chapters/chapter_14_engagement_development_analytics_and_continuous_improvement.md) implements **Lifecycle History → Descriptive Metrics → Observed Pattern → Improvement Hypothesis → Controlled Next-Cycle Experiment**. It derives from existing pipeline and closure ledgers, preserves unknowns, separates activity from evidence yield, and makes no causal, revenue, or close-probability claim.
 
-Chapters 0–14 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven follow-up branches; Chapter 12 composes multiple accounts into an evidence-state portfolio without creating a parallel source of truth. Chapter 13 appends evidence-backed closure and Chapter 14 derives conservative process analytics and controlled improvement from that preserved history.
+[Chapter 15 — Engagement Development Simulator](chapters/chapter_15_engagement_development_simulator.md) is the Volume I capstone. It orchestrates the existing chapter subsystems across productive, zero-engagement, and capacity-constrained cycles; preserves a deterministic event and evidence ledger; validates cross-chapter invariants; reuses the Chapter 10 handoff; and derives improvement through Chapter 14 analytics.
+
+Chapters 0–15 are implemented and **Volume I is complete**. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven follow-up branches; Chapter 12 composes multiple accounts into an evidence-state portfolio without creating a parallel source of truth. Chapter 13 appends evidence-backed closure, Chapter 14 derives conservative process analytics, and Chapter 15 orchestrates a complete evidence-led cycle without guaranteeing an engagement.
+
+## Volume I — From No Engagement to Qualified Engagement
+
+1. Chapter 0 — From No Engagement to a Legitimate Opportunity
+2. Chapter 1 — Define the Offer Before Looking for Prospects
+3. Chapter 2 — Choosing a Market
+4. Chapter 3 — Building an Account List
+5. Chapter 4 — Researching an Account
+6. Chapter 5 — Finding and Interpreting Signals
+7. Chapter 6 — Forming an Opportunity Hypothesis
+8. Chapter 7 — Mapping the Buying Organization
+9. Chapter 8 — Designing Evidence-Based Outreach
+10. Chapter 9 — Running the First Conversation
+11. Chapter 10 — Qualifying the Opportunity
+12. Chapter 11 — Managing Follow-Up Without Chasing
+13. Chapter 12 — Building and Managing the Engagement Pipeline
+14. Chapter 13 — Learning From Rejection, Closure, and Lost Opportunities
+15. Chapter 14 — Engagement Development Analytics and Continuous Improvement
+16. Chapter 15 — Engagement Development Simulator
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
 ## Laboratory boundary
 
-This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
+Volume I ends with an evidence-backed `EngagementHandoff`. The separate Sales Engineering Laboratory begins with that handoff and teaches how to run the actual engagement. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
 Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through qualification and follow-up, manage the evidence-state portfolio in [Chapter 12](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md), learn conservatively from closure in [Chapter 13](chapters/chapter_13_learning_from_rejection_closure_and_lost_opportunities.md), and use preserved history for process learning in [Chapter 14](chapters/chapter_14_engagement_development_analytics_and_continuous_improvement.md).
 
-The recommended next chapter is **Chapter 15 — Engagement Development Simulator**, the Volume I capstone: orchestrate Chapters 0–14 across multiple accounts while allowing every evidence-based ending, including zero qualified engagements.
+Run the completed capstone in [Chapter 15](chapters/chapter_15_engagement_development_simulator.md). A final QA/release pass is the recommended next step before expanding the laboratory or integrating more tightly with the downstream project.

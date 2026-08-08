@@ -19,14 +19,21 @@ from engagement_dev.scenarios import (
     chapter_twelve_report,
     chapter_zero_report,
 )
+from engagement_dev.simulation import chapter_fifteen_report
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="engagement-dev")
     parser.add_argument(
         "chapter",
-        choices=tuple(f"chapter-{number}" for number in range(15)),
+        choices=tuple(f"chapter-{number}" for number in range(16)),
         help="chapter scenario to run",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=("productive", "zero-engagement", "capacity-constrained"),
+        default="productive",
+        help="named deterministic Chapter 15 fixture",
     )
     return parser
 
@@ -63,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
         print(chapter_thirteen_report(), end="")
     elif args.chapter == "chapter-14":
         print(chapter_fourteen_report(), end="")
+    elif args.chapter == "chapter-15":
+        print(chapter_fifteen_report(args.scenario), end="")
     return 0
 
 

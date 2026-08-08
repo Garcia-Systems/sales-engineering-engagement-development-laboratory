@@ -2,6 +2,22 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Chapter 15 Engagement Development Simulator",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_engagement_development_simulator.py",
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 15 Invariant Failure",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_chapter_15_invariant_failure.py",
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Chapter 0",
       "type": "debugpy",
       "request": "launch",
