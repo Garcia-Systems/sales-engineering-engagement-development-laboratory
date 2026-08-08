@@ -1,6 +1,6 @@
 # Chapter 9 — Running the First Conversation
 
-![Running an evidence-following first conversation to reduce uncertainty](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_40 PM.png>)
+![Running an evidence-following first conversation to reduce uncertainty](<../images/chapters/chapter_09_running_the_first_conversation.png>)
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # Chapter 5 — Finding and Interpreting Signals
 
-![Evaluating account observations to form supported signal clusters and investigation questions](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_30 PM.png>)
+![Evaluating account observations to form supported signal clusters and investigation questions](<../images/chapters/chapter_05_finding_and_interpreting_signals.png>)
 
 ## Purpose
 

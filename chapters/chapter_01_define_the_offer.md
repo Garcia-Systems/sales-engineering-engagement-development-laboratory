@@ -1,6 +1,6 @@
 # Chapter 1 — Define the Offer Before Looking for Prospects
 
-![Evidence-backed offer design flowing from proof and capability to a supported offer](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_15 PM.png>)
+![Evidence-backed offer design flowing from proof and capability to a supported offer](<../images/chapters/chapter_01_define_the_offer.png>)
 
 ## Purpose
 

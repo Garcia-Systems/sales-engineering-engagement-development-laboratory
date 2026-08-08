@@ -1,6 +1,6 @@
 # Chapter 12 — Building and Managing the Engagement Pipeline
 
-![Managing an engagement pipeline as an evidence-based projection of current account states](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_51 PM.png>)
+![Managing an engagement pipeline as an evidence-based projection of current account states](<../images/chapters/chapter_12_building_and_managing_the_engagement_pipeline.png>)
 
 ## Purpose
 

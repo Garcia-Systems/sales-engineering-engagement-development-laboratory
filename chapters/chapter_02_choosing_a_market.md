@@ -1,6 +1,6 @@
 # Chapter 2 — Choosing a Market
 
-![Market selection as an evidence-based allocation of research attention](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_18 PM.png>)
+![Market selection as an evidence-based allocation of research attention](<../images/chapters/chapter_02_choosing_a_market.png>)
 
 ## Purpose
 

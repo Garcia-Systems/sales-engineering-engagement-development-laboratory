@@ -1,6 +1,6 @@
 # Chapter 8 — Designing Evidence-Based Outreach
 
-![Designing respectful outreach from public evidence, stakeholder relevance, and neutral questions](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_38 PM.png>)
+![Designing respectful outreach from public evidence, stakeholder relevance, and neutral questions](<../images/chapters/chapter_08_designing_evidence_based_outreach.png>)
 
 ## Purpose
 

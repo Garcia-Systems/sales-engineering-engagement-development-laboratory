@@ -1,6 +1,6 @@
 # Chapter 3 — Building an Account List
 
-![Building an evidence-based account research queue within a selected market](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_20 PM.png>)
+![Building an evidence-based account research queue within a selected market](<../images/chapters/chapter_03_building_an_account_list.png>)
 
 ## Purpose
 

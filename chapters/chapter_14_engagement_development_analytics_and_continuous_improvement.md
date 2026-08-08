@@ -1,6 +1,6 @@
 # Chapter 14 — Engagement Development Analytics and Continuous Improvement
 
-![Using descriptive engagement analytics to form questions and controlled improvement experiments](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_57 PM.png>)
+![Using descriptive engagement analytics to form questions and controlled improvement experiments](<../images/chapters/chapter_14_engagement_development_analytics_and_continuous_improvement.png>)
 
 ## Purpose
 

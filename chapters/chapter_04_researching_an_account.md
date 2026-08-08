@@ -1,6 +1,6 @@
 # Chapter 4 — Researching an Account
 
-![Classifying public account evidence into facts, observations, inferences, and unknowns](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_25 PM.png>)
+![Classifying public account evidence into facts, observations, inferences, and unknowns](<../images/chapters/chapter_04_researching_an_account.png>)
 
 ## Purpose
 

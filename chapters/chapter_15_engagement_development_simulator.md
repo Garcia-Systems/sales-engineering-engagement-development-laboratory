@@ -1,6 +1,6 @@
 # Chapter 15 — Engagement Development Simulator
 
-![Simulating the complete evidence-led engagement development lifecycle across multiple accounts](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_39_00 PM.png>)
+![Simulating the complete evidence-led engagement development lifecycle across multiple accounts](<../images/chapters/chapter_15_engagement_development_simulator.png>)
 
 ## Purpose
 

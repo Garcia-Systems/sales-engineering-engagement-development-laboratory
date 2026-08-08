@@ -1,6 +1,6 @@
 # Chapter 13 — Learning From Rejection, Closure, and Lost Opportunities
 
-![Learning conservatively from evidence-backed rejection, closure, and lost opportunity outcomes](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_54 PM.png>)
+![Learning conservatively from evidence-backed rejection, closure, and lost opportunity outcomes](<../images/chapters/chapter_13_learning_from_rejection_closure_and_lost_opportunities.png>)
 
 ## Purpose
 
