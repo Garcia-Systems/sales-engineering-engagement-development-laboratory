@@ -1,6 +1,6 @@
 # Chapter 10 — Qualifying the Opportunity
 
-![Applying a conservative evidence-based threshold to qualify an engagement opportunity](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_44 PM.png>)
+![Applying a conservative evidence-based threshold to qualify an engagement opportunity](<../images/chapters/chapter_10_qualifying_the_opportunity.png>)
 
 ## Purpose
 

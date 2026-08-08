@@ -1,6 +1,6 @@
 # Chapter 11 — Managing Follow-Up Without Chasing
 
-![Managing respectful follow-up with legitimate reasons, timing, and stopping rules](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_48 PM.png>)
+![Managing respectful follow-up with legitimate reasons, timing, and stopping rules](<../images/chapters/chapter_11_managing_follow_up_without_chasing.png>)
 
 ## Purpose
 

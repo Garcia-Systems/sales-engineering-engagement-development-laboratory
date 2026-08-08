@@ -1,6 +1,6 @@
 # Chapter 6 — Forming an Opportunity Hypothesis
 
-![Forming a traceable and falsifiable opportunity hypothesis from supported signals](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_33 PM.png>)
+![Forming a traceable and falsifiable opportunity hypothesis from supported signals](<../images/chapters/chapter_06_forming_an_opportunity_hypothesis.png>)
 
 ## Purpose
 

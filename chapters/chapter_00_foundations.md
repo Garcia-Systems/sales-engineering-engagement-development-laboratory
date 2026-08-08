@@ -1,6 +1,6 @@
 # Chapter 0 — From No Engagement to a Legitimate Opportunity
 
-![Evidence-led lifecycle from market context to a legitimate engagement opportunity](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_12 PM.png>)
+![Evidence-led lifecycle from market context to a legitimate engagement opportunity](<../images/chapters/chapter_00_foundations.png>)
 
 ## Learning objectives
 

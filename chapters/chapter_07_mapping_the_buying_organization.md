@@ -1,6 +1,6 @@
 # Chapter 7 — Mapping the Buying Organization
 
-![Mapping stakeholders by their proximity to evidence rather than assumed buying authority](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_35 PM.png>)
+![Mapping stakeholders by their proximity to evidence rather than assumed buying authority](<../images/chapters/chapter_07_mapping_the_buying_organization.png>)
 
 ## Purpose
 
