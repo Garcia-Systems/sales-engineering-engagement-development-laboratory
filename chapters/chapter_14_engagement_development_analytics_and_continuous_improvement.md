@@ -130,4 +130,4 @@ The dashboard is a retrospective instrument, not a forecast or a performance ver
 
 ## Connection to Chapter 15
 
-The recommended next chapter is **Chapter 15 — Engagement Development Simulator**, the Volume I capstone. It should orchestrate Chapters 0–14 from an empty multi-account pipeline to evidence-based outcomes, including legitimate closure, deferral, refutation, more discovery, and even **0 qualified engagements**. Chapter 15 is not implemented here.
+Continue with **Chapter 15 — Engagement Development Simulator**, the implemented Volume I capstone. It orchestrates Chapters 0–14 from an empty multi-account pipeline to evidence-based outcomes, including legitimate closure, deferral, refutation, more discovery, and even **0 qualified engagements**.
