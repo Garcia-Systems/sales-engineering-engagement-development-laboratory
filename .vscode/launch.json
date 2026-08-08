@@ -133,6 +133,16 @@
         "PYTHONPATH": "${workspaceFolder}/src"
       },
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chapter 13 Closure Reasoning",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_closure_reasoning.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
     }
   ]
 }

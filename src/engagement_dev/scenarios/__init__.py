@@ -79,3 +79,4 @@ def chapter_zero_report() -> str:
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 from engagement_dev.scenarios.chapter_twelve import analyze_chapter_twelve, chapter_twelve_report
+from engagement_dev.scenarios.chapter_thirteen import analyze_chapter_thirteen, chapter_thirteen_report

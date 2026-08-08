@@ -37,6 +37,7 @@ engagement-dev chapter-9
 engagement-dev chapter-10
 engagement-dev chapter-11
 engagement-dev chapter-12
+engagement-dev chapter-13
 # or
 python -m engagement_dev.cli chapter-0
 pytest
@@ -70,7 +71,9 @@ Chapter 3 — [Building an Account List](chapters/chapter_03_building_an_account
 
 [Chapter 12 — Building and Managing the Engagement Pipeline](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md) implements **Existing Lifecycle Evidence → Derived Pipeline State → Next Justified Action → Capacity Allocation → New Evidence**. It preserves state history and regression, separates activity from progress, protects silent accounts, enforces simple WIP limits, and excludes fake revenue forecasts and close probabilities.
 
-Chapters 0–12 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven follow-up branches; Chapter 12 composes multiple accounts into an evidence-state portfolio without creating a parallel source of truth.
+[Chapter 13 — Learning From Rejection, Closure, and Lost Opportunities](chapters/chapter_13_learning_from_rejection_closure_and_lost_opportunities.md) implements **Outcome Evidence → Closure or Defer Decision → Observed Reason → Supported Learning → Reopen Trigger**. It preserves pipeline history, accepts `UNKNOWN`, separates closure levels, rejects unsupported narratives, and prevents account evidence from becoming a market generalization.
+
+Chapters 0–13 are implemented. Chapter 10 completes the first major qualification lifecycle; Chapter 11 adds evidence-driven follow-up branches; Chapter 12 composes multiple accounts into an evidence-state portfolio without creating a parallel source of truth. Chapter 13 appends evidence-backed closure, bounded learning, and legitimate reopen triggers while preserving that history.
 
 Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional Northstar Systems Studio scenario evaluates bounded offers, vague language, and overclaims without treating proof of capability as proof of customer need.
 
@@ -78,6 +81,6 @@ Run Chapter 1 with `python -m engagement_dev.cli chapter-1`. Its fictional North
 
 This laboratory ends when there is enough justified evidence to begin a structured sales engineering engagement. The downstream Sales Engineering Laboratory begins there. An `EngagementCandidate` is a handoff candidate—not a closed sale and not customer approval.
 
-Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md), practice respectful continuation and stopping in [Chapter 11](chapters/chapter_11_managing_follow_up_without_chasing.md), and manage the evidence-state portfolio in [Chapter 12](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md).
+Start with [Chapter 0](chapters/chapter_00_foundations.md), continue sequentially through the simulated discovery conversation in [Chapter 9](chapters/chapter_09_running_the_first_conversation.md), cross the boundary carefully in [Chapter 10](chapters/chapter_10_qualifying_the_opportunity.md), practice respectful continuation and stopping in [Chapter 11](chapters/chapter_11_managing_follow_up_without_chasing.md), manage the evidence-state portfolio in [Chapter 12](chapters/chapter_12_building_and_managing_the_engagement_pipeline.md), and learn conservatively from closure in [Chapter 13](chapters/chapter_13_learning_from_rejection_closure_and_lost_opportunities.md).
 
-The recommended next chapter is **Chapter 13 — Learning From Rejection, Closure, and Lost Opportunities**: learning from evidence-backed closure without inventing explanations for why an account did not become an engagement.
+The recommended next chapter is **Chapter 14 — Engagement Development Analytics and Continuous Improvement**: aggregate historical evidence transitions without mistaking activity metrics for causal proof or sales skill.

@@ -1252,15 +1252,18 @@ PIPELINE_TRANSITIONS: dict[PipelineState, frozenset[PipelineState]] = {
     PipelineState.AWAITING_RESPONSE: frozenset({PipelineState.CONVERSATION_ACTIVE, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
     PipelineState.CONVERSATION_ACTIVE: frozenset({PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY}),
     PipelineState.MORE_DISCOVERY_NEEDED: frozenset({PipelineState.QUALIFIED_FOR_ENGAGEMENT, PipelineState.CONVERSATION_ACTIVE, PipelineState.DEFERRED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
-    PipelineState.QUALIFIED_FOR_ENGAGEMENT: frozenset({PipelineState.DEFERRED, PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
+    PipelineState.QUALIFIED_FOR_ENGAGEMENT: frozenset({PipelineState.DEFERRED, PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE, PipelineState.QUALIFIED_ENGAGEMENT_CLOSED}),
     PipelineState.DEFERRED: frozenset({PipelineState.RESEARCHING, PipelineState.SIGNAL_FOUND, PipelineState.HYPOTHESIS_SUPPORTED, PipelineState.STAKEHOLDER_MAPPED, PipelineState.OUTREACH_READY, PipelineState.AWAITING_RESPONSE, PipelineState.CONVERSATION_ACTIVE, PipelineState.MORE_DISCOVERY_NEEDED, PipelineState.QUALIFIED_FOR_ENGAGEMENT, PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}),
     PipelineState.CLOSED_NO_OPPORTUNITY: frozenset({PipelineState.RESEARCHING}),
     PipelineState.OUT_OF_SCOPE: frozenset({PipelineState.RESEARCHING}),
+    PipelineState.QUALIFIED_ENGAGEMENT_CLOSED: frozenset({PipelineState.RESEARCHING}),
 }
 
 
 def derive_pipeline_state(item: PipelineItem) -> PipelineState:
     """Project the strongest current evidence state; this is the derivation breakpoint."""
+    if item.disposition is PipelineDisposition.QUALIFIED_ENGAGEMENT_CLOSED:
+        return PipelineState.QUALIFIED_ENGAGEMENT_CLOSED
     if item.disposition is PipelineDisposition.OUT_OF_SCOPE:
         return PipelineState.OUT_OF_SCOPE
     if item.disposition is PipelineDisposition.CLOSED_NO_OPPORTUNITY:
@@ -1325,6 +1328,7 @@ def next_justified_action(item: PipelineItem) -> NextJustifiedAction:
         PipelineState.QUALIFIED_FOR_ENGAGEMENT: ("Create evidence-backed handoff", "FORMAL_HANDOFF", "The Chapter 10 threshold passed."),
         PipelineState.CLOSED_NO_OPPORTUNITY: ("None", None, "The current investigation is closed."),
         PipelineState.OUT_OF_SCOPE: ("None", None, "The work is outside the supported offer."),
+        PipelineState.QUALIFIED_ENGAGEMENT_CLOSED: ("None", None, "The previously qualified engagement is closed; await a documented trigger."),
     }
     description, kind, reason = actions[state]
     return NextJustifiedAction(description, kind, reason)
@@ -1410,7 +1414,7 @@ class ExplainedHealthFinding:
 
 
 def stale_items(items: tuple[PipelineItem, ...], *, today: date, threshold_days: int = 21) -> tuple[PipelineItem, ...]:
-    terminal = {PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE}
+    terminal = {PipelineState.CLOSED_NO_OPPORTUNITY, PipelineState.OUT_OF_SCOPE, PipelineState.QUALIFIED_ENGAGEMENT_CLOSED}
     return tuple(item for item in items if derive_pipeline_state(item) not in terminal and item.last_meaningful_evidence_on is not None and today - item.last_meaningful_evidence_on > timedelta(days=threshold_days))
 
 
@@ -1428,3 +1432,125 @@ def pipeline_health(items: tuple[PipelineItem, ...], *, today: date, limits: Pip
     if not any(f.finding in {PipelineHealthFinding.TOO_MANY_RESEARCHING, PipelineHealthFinding.TOO_MANY_AWAITING_RESPONSE, PipelineHealthFinding.NO_QUALIFIED_ENGAGEMENTS} for f in findings):
         findings.insert(0, ExplainedHealthFinding(PipelineHealthFinding.BALANCED_PIPELINE, "The portfolio contains current research, supported downstream evidence, and a qualified handoff within WIP limits."))
     return tuple(findings)
+
+
+# Chapter 13 closure policies consume Chapter 12 projections and append to them.
+from engagement_dev.domain import (
+    ClosureEvidence, ClosureLearning, ClosureLevel, ClosureReason, ClosureRecord,
+    LearningCategory, LearningScope, ReasonKnowledge, ReopenCondition,
+)
+
+
+class ClosureEvaluationResult(StrEnum):
+    SUPPORTED_CLOSURE = "SUPPORTED_CLOSURE"
+    INSUFFICIENT_REASON_EVIDENCE = "INSUFFICIENT_REASON_EVIDENCE"
+    DEFER_INSTEAD_OF_CLOSE = "DEFER_INSTEAD_OF_CLOSE"
+    REQUIRES_REVIEW = "REQUIRES_REVIEW"
+    QUALIFIED_ENGAGEMENT_CLOSURE = "QUALIFIED_ENGAGEMENT_CLOSURE"
+
+
+@dataclass(frozen=True)
+class ClosureEvaluation:
+    result: ClosureEvaluationResult
+    proposed_reason: ClosureReason
+    recorded_reason: ClosureReason
+    level: ClosureLevel
+    known_facts: tuple[str, ...]
+    inferred_possibilities: tuple[str, ...]
+    unknowns: tuple[str, ...]
+    explanation: str
+
+
+class ClosureEvaluator:
+    """Accept only a reason explicitly described by known, sourced evidence."""
+
+    _reason_terms = {
+        ClosureReason.HYPOTHESIS_REFUTED: ("automatically", "no manual", "does not create"),
+        ClosureReason.NO_CURRENT_PRIORITY: ("not a priority", "no current priority"),
+        ClosureReason.NO_ACTIONABLE_IMPACT: ("no actionable impact", "not material"),
+        ClosureReason.INTERNAL_ONLY: ("internal", "not using outside", "no outside"),
+        ClosureReason.EXTERNAL_HELP_NOT_ACCEPTED: ("not using outside", "external help not accepted"),
+        ClosureReason.OUT_OF_SCOPE: ("out of scope", "outside"),
+        ClosureReason.STAKEHOLDER_DECLINED: ("declined", "do not contact"),
+        ClosureReason.NO_RESPONSE_AFTER_STOPPING_RULE: ("stopping rule completed", "three attempts", "no response observed"),
+        ClosureReason.INSUFFICIENT_EVIDENCE: ("insufficient evidence",),
+        ClosureReason.TIMING_INACTIVE: ("next fiscal year", "not considering changes until", "timing inactive"),
+        ClosureReason.PROJECT_CANCELLED: ("project has been cancelled", "project cancelled"),
+        ClosureReason.EXISTING_APPROACH_ADEQUATE: ("existing approach", "working adequately"),
+        ClosureReason.PROVIDER_NOT_FIT: ("industrial control", "regulatory certification", "outside demonstrated capability"),
+        ClosureReason.NO_BUDGET: ("no budget", "budget was not approved"),
+        ClosureReason.NOT_INTERESTED: ("not interested",),
+    }
+
+    def evaluate(
+        self,
+        proposed_reason: ClosureReason,
+        evidence: tuple[ClosureEvidence, ...],
+        level: ClosureLevel,
+        unknowns: tuple[str, ...] = (),
+    ) -> ClosureEvaluation:
+        known = tuple(item.statement for item in evidence if item.knowledge is ReasonKnowledge.KNOWN_CLOSURE_REASON)
+        inferred = tuple(item.statement for item in evidence if item.knowledge is ReasonKnowledge.INFERRED_POSSIBILITY)
+        if proposed_reason is ClosureReason.UNKNOWN:
+            return ClosureEvaluation(ClosureEvaluationResult.SUPPORTED_CLOSURE, proposed_reason, proposed_reason, level, known, inferred, unknowns, "Unknown is accurate when evidence does not establish a specific reason.")
+        folded = " ".join(known).casefold()
+        supported = any(term in folded for term in self._reason_terms[proposed_reason])
+        if not supported:
+            return ClosureEvaluation(ClosureEvaluationResult.INSUFFICIENT_REASON_EVIDENCE, proposed_reason, ClosureReason.UNKNOWN, level, known, inferred, unknowns, "Known evidence does not support the proposed reason; inferred possibilities cannot become the official reason.")
+        if proposed_reason is ClosureReason.TIMING_INACTIVE:
+            result = ClosureEvaluationResult.DEFER_INSTEAD_OF_CLOSE
+        elif level is ClosureLevel.QUALIFIED_ENGAGEMENT_CLOSURE:
+            result = ClosureEvaluationResult.QUALIFIED_ENGAGEMENT_CLOSURE
+        else:
+            result = ClosureEvaluationResult.SUPPORTED_CLOSURE
+        return ClosureEvaluation(result, proposed_reason, proposed_reason, level, known, inferred, unknowns, "The recorded reason is directly supported by sourced outcome evidence.")
+
+
+class ClosureLearningExtractor:
+    """Produce a bounded account lesson; never turn one account into a market fact."""
+
+    _lessons = {
+        ClosureReason.HYPOTHESIS_REFUTED: (LearningCategory.HYPOTHESIS_LEARNING, "The observed environment did not create the hypothesized problem in this account."),
+        ClosureReason.INTERNAL_ONLY: (LearningCategory.QUALIFICATION_LEARNING, "A confirmed problem did not create an external engagement because internal ownership was explicit."),
+        ClosureReason.EXTERNAL_HELP_NOT_ACCEPTED: (LearningCategory.QUALIFICATION_LEARNING, "Confirmed workflow friction was insufficient when external assistance was explicitly excluded."),
+        ClosureReason.NO_RESPONSE_AFTER_STOPPING_RULE: (LearningCategory.OUTREACH_LEARNING, "The permitted outreach sequence ended with no response observed."),
+        ClosureReason.PROJECT_CANCELLED: (LearningCategory.QUALIFICATION_LEARNING, "An external project cancellation ended an otherwise qualified engagement."),
+        ClosureReason.PROVIDER_NOT_FIT: (LearningCategory.PROCESS_LEARNING, "Qualification prevented work beyond the provider's demonstrated capability."),
+        ClosureReason.TIMING_INACTIVE: (LearningCategory.ACCOUNT_LEARNING, "The account stated that the relevant timing is inactive until its explicit trigger."),
+    }
+
+    def extract(self, reason: ClosureReason, evidence: tuple[ClosureEvidence, ...]) -> tuple[ClosureLearning, ...]:
+        known = tuple(item.statement for item in evidence if item.knowledge is ReasonKnowledge.KNOWN_CLOSURE_REASON)
+        template = self._lessons.get(reason)
+        if not template or not known:
+            return ()
+        category, statement = template
+        return (ClosureLearning(category, statement, LearningScope.ACCOUNT_SPECIFIC, known),)
+
+
+def append_closure_record(
+    item: PipelineItem,
+    evaluation: ClosureEvaluation,
+    *,
+    evidence: tuple[ClosureEvidence, ...],
+    closure_date: date,
+    unknowns: tuple[str, ...],
+    unsupported_lessons: tuple[str, ...],
+    reopen_condition: ReopenCondition | None = None,
+) -> ClosureRecord:
+    previous = derive_pipeline_state(item)
+    if evaluation.result is ClosureEvaluationResult.DEFER_INSTEAD_OF_CLOSE:
+        closure_state = PipelineState.DEFERRED
+    elif evaluation.level is ClosureLevel.QUALIFIED_ENGAGEMENT_CLOSURE:
+        closure_state = PipelineState.QUALIFIED_ENGAGEMENT_CLOSED
+    elif evaluation.recorded_reason in {ClosureReason.OUT_OF_SCOPE, ClosureReason.PROVIDER_NOT_FIT}:
+        closure_state = PipelineState.OUT_OF_SCOPE
+    else:
+        closure_state = PipelineState.CLOSED_NO_OPPORTUNITY
+    history = item.state_history + (PipelineStateEvent(closure_date, closure_state, f"Closure reason: {evaluation.recorded_reason.value}."),)
+    lessons = ClosureLearningExtractor().extract(evaluation.recorded_reason, evidence)
+    return ClosureRecord(
+        item.account, item, previous, closure_state, evaluation.recorded_reason,
+        evidence, evaluation.known_facts, unknowns, lessons, unsupported_lessons,
+        reopen_condition, closure_date, history, evaluation.level,
+    )
