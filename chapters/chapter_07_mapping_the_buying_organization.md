@@ -1,5 +1,7 @@
 # Chapter 7 — Mapping the Buying Organization
 
+![Mapping stakeholders by their proximity to evidence rather than assumed buying authority](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_35 PM.png>)
+
 ## Purpose
 
 Chapter 6 produced a provisional opportunity hypothesis. Chapter 7 asks: **Who inside the organization could help us confirm, refine, or refute the opportunity hypothesis?** It maps likely sources of evidence; it does not identify people to whom we should automatically sell.

@@ -1,5 +1,7 @@
 # Chapter 15 — Engagement Development Simulator
 
+![Simulating the complete evidence-led engagement development lifecycle across multiple accounts](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_39_00 PM.png>)
+
 ## Purpose
 
 This Volume I capstone asks: **Can we run the entire engagement-development process from an empty pipeline to evidence-based outcomes across multiple accounts?** `EngagementDevelopmentSimulator` orchestrates the chapter services and immutable records; it is not a second implementation of them.

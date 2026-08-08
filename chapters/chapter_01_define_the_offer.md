@@ -1,5 +1,7 @@
 # Chapter 1 — Define the Offer Before Looking for Prospects
 
+![Evidence-backed offer design flowing from proof and capability to a supported offer](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_15 PM.png>)
+
 ## Purpose
 
 Engagement development begins by asking **“What kinds of business problems are we actually qualified to investigate?”**, not by finding a company and inventing a reason it might need us. Chapter 0's evidence discipline still applies. Chapter 1 adds an upstream filter:

@@ -1,5 +1,7 @@
 # Chapter 5 — Finding and Interpreting Signals
 
+![Evaluating account observations to form supported signal clusters and investigation questions](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_30 PM.png>)
+
 ## Purpose
 
 Which observations from account research are meaningful enough to justify investigating a possible business problem? Chapter 5 implements **Account Research Brief → Signal Analysis → Investigation Questions**. It does not form an opportunity hypothesis.

@@ -1,5 +1,7 @@
 # Chapter 9 — Running the First Conversation
 
+![Running an evidence-following first conversation to reduce uncertainty](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_40 PM.png>)
+
 ## Purpose
 
 If a relevant stakeholder responds, how do we conduct the first conversation so that we learn rather than immediately pitch? The explicit objective is `VALIDATE_OPPORTUNITY_HYPOTHESIS`, and its purpose is to **reduce uncertainty**. No external communication occurs; the transcript is a deterministic educational simulation.

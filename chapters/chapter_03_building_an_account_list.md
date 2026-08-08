@@ -1,5 +1,7 @@
 # Chapter 3 — Building an Account List
 
+![Building an evidence-based account research queue within a selected market](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_20 PM.png>)
+
 ## Purpose
 
 Once a market is worth investigating, which specific organizations deserve account-level research? Chapter 3 moves from market reasoning to an account **research queue**. It does not create a pipeline. Membership in an attractive market does not make an organization an opportunity.

@@ -1,5 +1,7 @@
 # Chapter 8 — Designing Evidence-Based Outreach
 
+![Designing respectful outreach from public evidence, stakeholder relevance, and neutral questions](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_38 PM.png>)
+
 ## Purpose
 
 How do we contact a relevant stakeholder without pretending we already understand their problem? Chapter 8 turns the account research, provisional opportunity hypothesis, and stakeholder map into a respectful invitation to learn. It creates deterministic drafts and **never sends external communication**.

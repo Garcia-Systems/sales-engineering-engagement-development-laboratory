@@ -1,5 +1,7 @@
 # Chapter 10 — Qualifying the Opportunity
 
+![Applying a conservative evidence-based threshold to qualify an engagement opportunity](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_44 PM.png>)
+
 ## Purpose
 
 Chapter 10 asks: **We now have evidence that a real problem may exist—but is it important and actionable enough to justify a formal sales engineering engagement?** It is the carefully controlled boundary between engagement development and formal Sales Engineering. A problem existing does not automatically mean an engagement exists.
