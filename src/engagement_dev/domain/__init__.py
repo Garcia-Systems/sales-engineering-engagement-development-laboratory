@@ -1252,3 +1252,119 @@ class ClosureRecord:
             raise ValueError("Closure must preserve the complete prior state history.")
         if not self.state_history or self.state_history[-1].state is not self.closure_state:
             raise ValueError("Closure history must append the closure state.")
+
+
+# Chapter 14 describes existing lifecycle history.  It intentionally owns no
+# account, evidence, or stage data: those records remain the source of truth.
+class AnalyticsWarning(StrEnum):
+    DESCRIPTIVE_ONLY = "DESCRIPTIVE_ONLY"
+    INSUFFICIENT_SAMPLE = "INSUFFICIENT_SAMPLE"
+
+
+class BottleneckKind(StrEnum):
+    RESEARCH_BOTTLENECK = "RESEARCH_BOTTLENECK"
+    SIGNAL_BOTTLENECK = "SIGNAL_BOTTLENECK"
+    HYPOTHESIS_BOTTLENECK = "HYPOTHESIS_BOTTLENECK"
+    STAKEHOLDER_COVERAGE_BOTTLENECK = "STAKEHOLDER_COVERAGE_BOTTLENECK"
+    OUTREACH_RESPONSE_BOTTLENECK = "OUTREACH_RESPONSE_BOTTLENECK"
+    DISCOVERY_BOTTLENECK = "DISCOVERY_BOTTLENECK"
+    QUALIFICATION_BOTTLENECK = "QUALIFICATION_BOTTLENECK"
+    EXCESS_FOLLOW_UP_ACTIVITY = "EXCESS_FOLLOW_UP_ACTIVITY"
+    EXCESS_WIP = "EXCESS_WIP"
+    INSUFFICIENT_SAMPLE = "INSUFFICIENT_SAMPLE"
+    NO_CLEAR_BOTTLENECK = "NO_CLEAR_BOTTLENECK"
+
+
+@dataclass(frozen=True)
+class EngagementDevelopmentHistory:
+    """References immutable Chapter 12/13 records without copying their facts."""
+
+    pipeline_items: tuple[PipelineItem, ...]
+    closures: tuple[ClosureRecord, ...] = ()
+    accounts_considered: int = 0
+
+
+@dataclass(frozen=True)
+class StageTransitionSummary:
+    from_state: PipelineState
+    to_state: PipelineState
+    observed_count: int
+
+
+@dataclass(frozen=True)
+class StateDurationSummary:
+    state: PipelineState
+    observations: int
+    average_scenario_days: float
+
+
+@dataclass(frozen=True)
+class ProcessMetrics:
+    counts: tuple[tuple[str, int], ...]
+    transitions: tuple[StageTransitionSummary, ...]
+    time_in_state: tuple[StateDurationSummary, ...]
+    closure_reasons: tuple[tuple[ClosureReason, int], ...]
+    market_counts: tuple[tuple[str, tuple[tuple[str, int], ...]], ...]
+    total_activities: int
+    evidence_producing_activities: int
+    warnings: tuple[AnalyticsWarning, ...]
+    causal_explanation: str = "UNKNOWN"
+    closed_deals: None = None
+    revenue_forecast: None = None
+
+    def count(self, name: str) -> int:
+        return dict(self.counts).get(name, 0)
+
+
+@dataclass(frozen=True)
+class BottleneckFinding:
+    kind: BottleneckKind
+    evidence: tuple[str, ...]
+    interpretation: str
+    causal_explanation: str = "UNKNOWN"
+
+
+class ImprovementHypothesisStatus(StrEnum):
+    UNVALIDATED = "UNVALIDATED"
+
+
+@dataclass(frozen=True)
+class ImprovementHypothesis:
+    statement: str
+    observed_evidence: tuple[str, ...]
+    falsification_condition: str
+    status: ImprovementHypothesisStatus = ImprovementHypothesisStatus.UNVALIDATED
+
+
+@dataclass(frozen=True)
+class ImprovementExperiment:
+    hypothesis: ImprovementHypothesis
+    process_variable: str
+    comparison_condition: str
+    observable_outcomes: tuple[str, ...]
+    guardrails: tuple[str, ...]
+    result: str
+    interpretation_limits: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ImprovementPlan:
+    experiments: tuple[ImprovementExperiment, ...]
+    keep_constant: tuple[str, ...]
+    changed_variables: tuple[str, ...]
+    observe: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.changed_variables) > 2:
+            raise ValueError("A learning cycle may change at most two process variables.")
+
+
+@dataclass(frozen=True)
+class CycleRetrospective:
+    cycle: int
+    metrics: ProcessMetrics
+    primary_bottleneck: BottleneckFinding
+    what_worked: tuple[str, ...]
+    remains_unknown: tuple[str, ...]
+    improvement_hypothesis: ImprovementHypothesis
+    improvement_plan: ImprovementPlan
