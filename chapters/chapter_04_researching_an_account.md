@@ -1,5 +1,7 @@
 # Chapter 4 — Researching an Account
 
+![Classifying public account evidence into facts, observations, inferences, and unknowns](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_25 PM.png>)
+
 ## Purpose
 
 What can we responsibly learn about a selected organization before contacting anyone? Chapter 4 assembles an evidence-based account brief from ordinary fictional public information. It asks **“What do we know?”** before **“What do we think might be happening?”** It creates neither an opportunity hypothesis nor qualification.

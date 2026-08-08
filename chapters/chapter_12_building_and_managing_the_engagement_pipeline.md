@@ -1,5 +1,7 @@
 # Chapter 12 — Building and Managing the Engagement Pipeline
 
+![Managing an engagement pipeline as an evidence-based projection of current account states](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_51 PM.png>)
+
 ## Purpose
 
 How do we manage many accounts at different evidence states without confusing activity with actual progress? Chapter 12 composes the records built in Chapters 0–11 into a portfolio projection:

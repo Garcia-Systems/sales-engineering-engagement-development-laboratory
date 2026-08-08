@@ -1,5 +1,7 @@
 # Chapter 2 — Choosing a Market
 
+![Market selection as an evidence-based allocation of research attention](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_18 PM.png>)
+
 ## Purpose
 
 Given what we can credibly offer, where should we look for potential engagements? Chapter 2 treats market selection as an **allocation-of-attention decision**, not proof of customer need. Identify markets whose observable characteristics make supported problem classes plausible enough to justify further investigation. Never pick an industry and assume it needs a service.

@@ -1,5 +1,7 @@
 # Chapter 6 — Forming an Opportunity Hypothesis
 
+![Forming a traceable and falsifiable opportunity hypothesis from supported signals](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_33 PM.png>)
+
 ## Purpose
 
 Given the signals we have observed, **what specific business problem might be worth validating?** Chapter 6 crosses an epistemic boundary from “something is worth investigating” to “a specific explanation is worth testing”—never to “we know the customer has this problem.”

@@ -1,5 +1,7 @@
 # Chapter 14 — Engagement Development Analytics and Continuous Improvement
 
+![Using descriptive engagement analytics to form questions and controlled improvement experiments](<../images/chapters/ChatGPT Image Aug 7, 2026, 09_38_57 PM.png>)
+
 ## Purpose
 
 Across many accounts, what does the evidence tell us about how our engagement-development process is working? Chapter 14 derives process analytics from the immutable pipeline histories and closure records created in Chapters 12 and 13. It asks what to investigate or change next; it is **not a predictive sales model**.
