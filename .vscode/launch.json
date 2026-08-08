@@ -135,6 +135,16 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Chapter 14 Process Analytics",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/debug_process_analytics.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chapter 13 Closure Reasoning",
       "type": "debugpy",
       "request": "launch",
